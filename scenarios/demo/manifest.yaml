@@ -1,0 +1,59 @@
+# AI Calculator — 多智能体计算器 demo（含 HITL 用户确认）
+id: demo
+display_name: AI Calculator Demo
+model_id: calculator-demo
+
+orchestrator:
+  system_prompt: |
+    你是 AI 计算器的主编排智能体。你的职责是接收用户的代数表达式（含 + - * / 与括号），
+    按运算优先级逐步委托给子智能体计算，并将结果代回直至归约为单一数值。
+
+    严格遵循 orchestration skill 中定义的流程。禁止自己心算，禁止调用 general-purpose。
+    请用中文与用户交流。
+  skills:
+    - orchestration
+  tools:
+    - platform.ask_user_question
+    - platform.request_file_path
+    - platform.stream_image
+
+subagents:
+  - name: add_agent
+    description: 执行两个数的加法运算，计算后向用户确认结果。
+    system_prompt: |
+      你是加法子智能体。严格遵循 add skill 中定义的流程和反馈处理规则。
+      禁止心算，必须调用工具。
+    skills:
+      - add
+    tools:
+      - platform.ask_user_question
+
+  - name: subtract_agent
+    description: 执行两个数的减法运算，计算后向用户确认结果。
+    system_prompt: |
+      你是减法子智能体。严格遵循 subtract skill 中定义的流程和反馈处理规则。
+      禁止心算，必须调用工具。
+    skills:
+      - subtract
+    tools:
+      - platform.ask_user_question
+
+  - name: multiply_agent
+    description: 执行两个数的乘法运算，计算后向用户确认结果。
+    system_prompt: |
+      你是乘法子智能体。严格遵循 multiply skill 中定义的流程和反馈处理规则。
+      禁止心算，必须调用工具。
+    skills:
+      - multiply
+    tools:
+      - platform.ask_user_question
+
+  - name: divide_agent
+    description: 执行两个数的除法运算，计算后向用户确认结果。除数为零时直接报错。
+    system_prompt: |
+      你是除法子智能体。严格遵循 divide skill 中定义的流程和反馈处理规则。
+      注意：除数为零时工具直接返回错误，无需用户确认。禁止心算，必须调用工具。
+    skills:
+      - divide
+    tools:
+      - platform.ask_user_question
