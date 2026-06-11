@@ -1,163 +1,163 @@
+[中文](./README.cn.md) · [English](./README.md)
+
 # 🤖 Open Agent Platform
 
-> 用自然语言描述你的目标，AI 智能体集群自动完成剩下的工作。
+> Describe your goal in natural language, and the AI agents take care of the rest.
 
 ---
 
-## ✨ 这是什么？
+## ✨ What Is This?
 
-这是一个 **LLM 驱动的智能体编排平台**。你只需用自然语言描述你的目标，系统会自动：
+This is an **agent platform**. You simply describe your goal in natural language, and the system will automatically:
 
-1. 🧠 **理解意图** — 识别你的需求
-2. 🔀 **任务分解** — 按领域流程拆解步骤
-3. 👷 **多智能体协作** — 主编排智能体（Orchestrator）调度专业子智能体（Subagents）分别执行
-4. 💬 **人机协作** — 关键节点弹出交互卡片，等你确认后继续
+1. 🧠 **Understand Intent** — Identify your needs
+2. 🔀 **Task Decomposition** — Break down steps by domain workflow
+3. 👷 **Multi-Agent Collaboration** — The Orchestrator schedules specialized Subagents to execute tasks
+4. 💬 **Human-in-the-Loop (HITL)** — Interactive cards pop up at key nodes, waiting for your feedback before proceeding
 
-整个流程模拟了 AI 多智能体协作与人机交互（HITL）工作模式。
+The entire workflow simulates AI multi-agent collaboration with a human-in-the-loop (HITL) pattern.
 
-### 📖 一个具体示例
+### 📖 A Concrete Example
 
-当你发送 `"(1+2)/3*4"`，系统内部会发生以下步骤：
+When you send `"(1+2)/3*4"`, the system internally goes through the following steps:
 
-1. **Orchestrator 解析意图** — 识别为混合运算表达式，含括号和加减乘除
-2. **按优先级归约** — 依次委派子智能体，逐步归约直至单一结果：
-  - `add_agent` 计算 `1+2=3`，表达式归约为 `3/3*4`
-  - `divide_agent` 计算 `3/3=1`，表达式归约为 `1*4`
-  - `multiply_agent` 计算 `1*4=4`
-3. **人机确认（HITL）** — 每个子步骤弹出选项卡片，等你确认中间结果
-4. **返回最终结果** — `4`
+1. **Orchestrator Parses Intent** — Recognizes it as a mixed arithmetic expression with parentheses, addition, subtraction, multiplication, and division
+2. **Reduction by Priority** — Delegates to subagents sequentially, reducing step by step until a single result is reached:
+  - `add_agent` computes `1+2=3`, reducing the expression to `3/3*4`
+  - `divide_agent` computes `3/3=1`, reducing the expression to `1*4`
+  - `multiply_agent` computes `1*4=4`
+3. **Human Confirmation (HITL)** — Each sub-step displays an option card for you to confirm the intermediate result
+4. **Return Final Result** — `4`
 
-整个过程中 SSE 流式输出实时展示 Orchestrator 的思考过程和子智能体的执行进度。
-
----
-
-## 🎯 它能做什么？
-
-平台本身是**场景无关的** — 通过 **Scenario System** 接入不同领域：
-
-
-| 场景          | 描述                                   |
-| ----------- | ------------------------------------ |
-| 📋 **Demo** | AI 计算器 — 演示多智能体编排与人机协作的最小验证场景        |
-| 📊 **数据分析** | 委派子智能体读取文件、执行分析、生成图表                 |
-| 🔍 **代码审查** | Orchestrator 拆解 PR，子智能体分别审查不同维度      |
-| 🔧 **你的场景** | 编写 `manifest.yaml` + skills，即可接入任意领域 |
-
+Throughout the process, SSE streaming output displays the Orchestrator's reasoning and the subagents' execution progress in real time.
 
 ---
 
-## 🚀 快速开始
+## 🎯 What Can It Do?
 
-### 前置条件
+The platform is **scenario-agnostic** — it connects to different domains via the **Scenario System**:
+
+
+| Scenario             | Description                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
+| 📋 **Demo**          | AI Calculator — a minimal verification scenario demonstrating multi-agent orchestration and HITL |
+| 🔧 **Your Scenario** | Write `manifest.yaml` + skills to plug in any domain                                             |
+
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
 
 - **Node.js 22+**
-- **DeepSeek API Key**（或其他 OpenAI 兼容 API）
+- **DeepSeek API Key**
 
-### 安装与启动
+### Installation & Launch
 
 ```bash
-# 1. 安装依赖
+# 1. Install dependencies
 npm install
 
-# 2. 配置 API Key
+# 2. Configure API Key
 cp .env.example .env
-# 编辑 .env，填入你的 LLM_API_KEY 和 SCENARIO
+# Edit .env, fill in your LLM_API_KEY
 
-# 3. 启动服务
+# 3. Start the service
 npm start
 ```
 
-服务启动在 `http://localhost:8888`，提供 OpenAI 兼容 API。
+The service starts at `http://localhost:8888`, providing an OpenAI-compatible API.
 
-### 验证服务
+### Verify the Service
 
 ```bash
-# 健康检查
+# Health check
 curl http://localhost:8888/health
 
-# 查看模型列表
+# List available models
 curl http://localhost:8888/v1/models
 ```
 
-### 🔧 环境变量说明
+### 🔧 Environment Variables
 
 
-| 变量               | 默认值                        | 说明                             |
-| ---------------- | -------------------------- | ------------------------------ |
-| `LLM_API_KEY`    | —                          | DeepSeek / OpenAI 兼容 API 密钥    |
-| `MODEL_NAME`     | `deepseek-v4-flash`        | 使用的模型名称                        |
-| `MODEL_BASE_URL` | `https://api.deepseek.com` | API 地址（可切换其他兼容服务）              |
-| `SCENARIO`       | `demo`                     | 加载的场景名称，对应 `scenarios/<name>/` |
-| `API_PORT`       | `8888`                     | 服务监听端口                         |
+| Variable         | Default                    | Description                                               |
+| ---------------- | -------------------------- | --------------------------------------------------------- |
+| `LLM_API_KEY`    | —                          | DeepSeek API key                                          |
+| `MODEL_NAME`     | `deepseek-v4-flash`        | Model name to use                                         |
+| `MODEL_BASE_URL` | `https://api.deepseek.com` | API base URL                                              |
+| `SCENARIO`       | `demo`                     | Scenario name to load, corresponds to `scenarios/<name>/` |
+| `API_PORT`       | `8888`                     | Service listening port                                    |
 
 
 ---
 
-## 🧩 场景系统（Scenario System）
+## 🧩 Scenario System
 
-平台核心与业务逻辑完全分离。每个场景是一个独立目录，声明式定义一切：
+The platform core is fully decoupled from business logic. Each scenario is an independent directory, declaratively defining everything:
 
 ```
-scenarios/<你的场景>/
-├── manifest.yaml    # 场景清单：智能体、工具、技能
-├── config.yaml      # 场景特定配置
-├── skills/          # 各智能体的技能指令（SKILL.md）+ 脚本
-├── tools/           # 场景专属工具工厂（index.ts）
+scenarios/<your-scenario>/
+├── manifest.yaml    # Scenario manifest: agents, tools, skills
+├── config.yaml      # Scenario-specific configuration
+├── skills/          # Skill instructions (SKILL.md) + scripts for each agent
+├── tools/           # Scenario-specific tool factories (index.ts)
 ```
 
-切换场景只需设置环境变量 `SCENARIO=<name>`，零代码修改。
+Switching scenarios only requires setting the environment variable `SCENARIO=<name>` — zero code changes.
 
-想开发新场景？参考 `scenarios/demo/` 起步，或直接问我 😄
+Want to develop a new scenario? Refer to `scenarios/demo/` to get started, or just ask me 😄
 
 ---
 
 ## 🔌 API
 
-### 端点一览
+### Endpoints Overview
 
 
-| 端点                                       | 说明                         |
-| ---------------------------------------- | -------------------------- |
-| `GET /health`                            | 健康检查                       |
-| `GET /v1/models`                         | 获取可用模型列表                   |
-| `POST /v1/chat/completions`              | 对话（SSE 流式），支持中断自动恢复        |
-| `GET /v1/sessions/:sessionId/live/:path` | 获取会话图片（MJPEG 实时流 + 静态 PNG） |
-| `GET /v1/fs/list?path=...&dirs_only=...` | 文件系统浏览（供前端文件选择器使用）         |
+| Endpoint                                 | Description                                                                  |
+| ---------------------------------------- | ---------------------------------------------------------------------------- |
+| `GET /health`                            | Health check                                                                 |
+| `GET /v1/models`                         | List available models                                                        |
+| `POST /v1/chat/completions`              | Chat completion (SSE streaming), supports automatic recovery on interruption |
+| `GET /v1/sessions/:sessionId/live/:path` | Get session image (MJPEG live stream + static PNG)                           |
+| `GET /v1/fs/list?path=...&dirs_only=...` | File system browser (for frontend file picker)                               |
 
 
-### 调用示例
+### Example Calls
 
-#### 健康检查
+#### Health Check
 
 ```bash
 curl http://localhost:8888/health
 ```
 
-响应：
+Response:
 
 ```json
 {
   "status": "healthy",
-  "service": "<场景 display_name>",
+  "service": "<scenario display_name>",
   "version": "v1.0",
   "active_streams": 0
 }
 ```
 
-#### 查看模型列表
+#### List Models
 
 ```bash
 curl http://localhost:8888/v1/models
 ```
 
-响应：
+Response:
 
 ```json
 {
   "object": "list",
   "data": [
     {
-      "id": "<场景 model_id>",
+      "id": "<scenario model_id>",
       "object": "model",
       "created": 1700000000,
       "owned_by": "Open Agent Platform"
@@ -166,51 +166,51 @@ curl http://localhost:8888/v1/models
 }
 ```
 
-> 模型 ID 由当前加载的场景的 `manifest.yaml` 中的 `model_id` 决定。例如 Demo 场景返回 `calculator-demo`。
+> The model ID is determined by the `model_id` field in the currently loaded scenario's `manifest.yaml`. For example, the Demo scenario returns `calculator-demo`.
 
 ---
 
-## 📦 项目结构
+## 📦 Project Structure
 
 ```
-├── src/             # 平台核心代码
-│   ├── web_server.ts   # Fastify 入口，SSE 流式输出
-│   ├── config.ts       # 配置管理
-│   ├── agents/         # 智能体运行（runner、SSE 格式化）
-│   ├── core/           # 核心框架（Agent 工厂、清单加载、会话管理、HITL 工具）
-│   ├── infra/          # 基础设施（SSE 流管理、LangGraph 检查点）
-│   └── openwebui/      # OpenWebUI 集成（元数据转发 filter）
+├── src/             # Platform core code
+│   ├── web_server.ts   # Fastify entry point, SSE streaming
+│   ├── config.ts       # Configuration management
+│   ├── agents/         # Agent runtime (runner, SSE formatting)
+│   ├── core/           # Core framework (Agent factory, manifest loading, session management, HITL tools)
+│   ├── infra/          # Infrastructure (SSE stream management, LangGraph checkpoints)
+│   └── openwebui/      # OpenWebUI integration (metadata forwarding filter)
 │
-├── scenarios/       # 业务场景（按领域隔离）
-│   └── demo/           # AI 计算器 — manifest + skills + tools
+├── scenarios/       # Business scenarios (isolated by domain)
+│   └── demo/           # AI Calculator — manifest + skills + tools
 │
-├── frontend/        # 前端组件（nginx 注入到 OpenWebUI）
-├── nginx/           # 反向代理配置
-├── .env.example     # 环境变量模板
+├── frontend/        # Frontend components (nginx-injected into OpenWebUI)
+├── nginx/           # Reverse proxy configuration
+├── .env.example     # Environment variable template
 └── package.json
 ```
 
 ---
 
-## 🛠 技术栈
+## 🛠 Tech Stack
 
-- **Agent 框架**：deepagents（基于 LangGraph）
-- **LLM**：DeepSeek V4（OpenAI 兼容 API），通过 `langchain_openai.ChatOpenAI` 接入，默认模型 `deepseek-v4-flash`
-- **Web 服务**：Fastify（TypeScript）
-- **流式输出**：SSE（Server-Sent Events）+ MJPEG（实时图片流）
-- **运行时**：Node.js 22+
-- **HITL**：`interrupt()` / `Command(resume=...)` 模式
-
----
-
-## 💻 接入 OpenWebUI
-
-本平台与 OpenWebUI 深度集成，提供 **HITL 交互卡片**、**文件路径选择器**、**动态图片渲染**、**会话管理**等能力。通过 nginx 将 OpenWebUI 页面和本平台后端统一代理，并注入前端 JS 将 HITL 代码块渲染为可交互组件。
-
-> 📖 完整部署步骤（conda 环境、nginx 配置、filter 插件安装）见 **[docs/openwebui-integration.md](docs/openwebui-integration.md)**
+- **Agent Framework**: deepagents (based on LangGraph)
+- **LLM**: DeepSeek V4, accessed via `langchain_openai.ChatOpenAI`, default model `deepseek-v4-flash`
+- **Web Server**: Fastify (TypeScript)
+- **Streaming**: SSE (Server-Sent Events) + MJPEG (real-time image stream)
+- **Runtime**: Node.js 22+
+- **HITL**: `interrupt()` / `Command(resume=...)` pattern
 
 ---
 
-## 📄 许可
+## 💻 OpenWebUI Integration
+
+This platform deeply integrates with OpenWebUI, providing **HITL interactive cards**, **file path picker**, **dynamic image rendering**, **session management**, and more. Through nginx, it proxies both the OpenWebUI frontend and the platform backend under a unified endpoint, injecting frontend JS to render HITL code blocks as interactive components.
+
+> 📖 For complete deployment steps (conda environment, nginx configuration, filter plugin installation), see **[docs/openwebui-integration.md](docs/openwebui-integration.md)**
+
+---
+
+## 📄 License
 
 MIT
