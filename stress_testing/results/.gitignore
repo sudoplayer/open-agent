@@ -1,3 +1,5 @@
 *
 !.gitignore
+!README.md
 !baseline.example.md
+!baseline.md

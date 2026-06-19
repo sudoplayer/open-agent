@@ -40,8 +40,6 @@ lsof -i :18888 -i :9999
 
 ```bash
 cd /path/to/open-agent
-
-# 可选：清理上次压测遗留的 runs/ 目录
 bash stress_testing/scripts/cleanup_runs.sh
 ```
 
@@ -70,17 +68,14 @@ VU=10 DURATION=30s npm run stress:l0
 固定参数：`DURATION=30s`，`MAX_SESSIONS=1000`（默认）。**每轮 VU 跑完再跑下一轮**。
 
 ```bash
-# 第 1 轮
-VU=5  DURATION=30s npm run stress:l1
-
-# 第 2 轮
-VU=10 DURATION=30s npm run stress:l1
-
-# 第 3 轮
-VU=20 DURATION=30s npm run stress:l1
-
-# 第 4 轮
-VU=50 DURATION=30s npm run stress:l1
+VU=5    DURATION=30s npm run stress:l1
+VU=10   DURATION=30s npm run stress:l1
+VU=20   DURATION=30s npm run stress:l1
+VU=50   DURATION=30s npm run stress:l1
+VU=100  DURATION=30s npm run stress:l1
+VU=200  DURATION=30s npm run stress:l1
+VU=500  DURATION=30s npm run stress:l1
+VU=1000 DURATION=30s npm run stress:l1
 ```
 
 若某轮 error rate > 1% 或 p95 急剧升高，可停止继续加压，该 VU 即为拐点参考。
@@ -92,11 +87,55 @@ VU=50 DURATION=30s npm run stress:l1
 | ------------------ | -------------------------- |
 | 请求数                | 结果摘要 → HTTP 请求数            |
 | 错误率                | 结果摘要 → 错误率                 |
+| p95 http_req_waiting | 结果摘要 → http_req_waiting p95 |
 | p95 time-to-DONE   | 结果摘要 → time_to_done p95    |
 | max active_streams | 运行时采样 → max active_streams |
 
 
-最后填写 **推荐最大并发 SSE 数**（error rate 仍 < 1% 的最高 VU，或拐点前一档）。
+最后填写 **推荐最大并发 SSE 数**（error rate 仍 < 1% 且 p95 time-to-DONE 可接受的最高 VU，或拐点前一档）。
+
+---
+
+### 步骤 2b：L1 长 Mock 流（可选，建议在步骤 2 之后做）
+
+目的：模拟真实 LLM **长 SSE 流**（几十秒级），观察 `active_streams` 在持续负载下的表现。  
+**不要与步骤 2 同时改 VU 和流长**——先完成 VU 阶梯，再在本节固定 VU 拉长 Mock。
+
+Mock 流时长近似：
+
+```text
+(MOCK_CHUNK_COUNT + 1) × MOCK_CHUNK_DELAY_MS
+```
+
+（`+1` 为 role chunk；未设 `MOCK_CHUNK_COUNT` 时按响应词数自动拆分，流很短。）
+
+示例：约 30s Mock 流，VU=100，持续 5 分钟：
+
+```bash
+MOCK_CHUNK_COUNT=600 MOCK_CHUNK_DELAY_MS=50 VU=100 DURATION=5m npm run stress:l1
+```
+
+示例：约 30s Mock 流（更少 chunk、更大间隔）：
+
+```bash
+MOCK_CHUNK_COUNT=60 MOCK_CHUNK_DELAY_MS=500 VU=100 DURATION=5m npm run stress:l1
+```
+
+**填入 baseline.md →「L1 长 Mock 流」**：每轮从 `report-l1-concurrent-*.md` 复制：
+
+
+| 字段                      | 报告中的位置                     |
+| ----------------------- | -------------------------- |
+| 请求数 / 成功 SSE           | 结果摘要                       |
+| 错误率                     | 结果摘要 → 错误率                 |
+| p95 http_req_waiting    | 结果摘要 → http_req_waiting p95 |
+| p95 http_req_receiving  | 结果摘要 → http_req_receiving p95 |
+| p95 time-to-DONE        | 结果摘要 → time_to_done p95    |
+| max active_streams      | 运行时采样 → max active_streams |
+| 峰值 RSS (MB)             | 运行时采样 → 峰值 RSS            |
+
+
+最后填写 **长流结论** 与 **长流推荐并发 SSE 上限**。
 
 ---
 
@@ -105,7 +144,6 @@ VU=50 DURATION=30s npm run stress:l1
 目的：创建大量唯一 session，观察 RSS 增长与 LRU 驱逐，确定推荐 `MAX_SESSIONS`。
 
 ```bash
-# 固定 MAX_SESSIONS=1000（默认），逐步增大 TARGET_SESSIONS
 SCENARIO=capacity TARGET_SESSIONS=100  npm run stress:l1
 SCENARIO=capacity TARGET_SESSIONS=200  npm run stress:l1
 SCENARIO=capacity TARGET_SESSIONS=500  npm run stress:l1
@@ -152,27 +190,6 @@ bash stress_testing/scripts/cleanup_runs.sh
 
 ---
 
-## 快速命令参考
-
-```bash
-# L0 基线
-npm run stress:l0
-
-# L1 并发（默认 VU=10, 30s）
-npm run stress:l1
-
-# L1 并发 — 指定 VU
-VU=20 DURATION=30s npm run stress:l1
-
-# L1 会话容量
-SCENARIO=capacity TARGET_SESSIONS=200 npm run stress:l1
-
-# 清理 runs/
-bash stress_testing/scripts/cleanup_runs.sh
-```
-
----
-
 ## 测试层级
 
 
@@ -199,6 +216,9 @@ bash stress_testing/scripts/cleanup_runs.sh
 | `SCENARIO`            | `concurrent`             | `concurrent` 或 `capacity` |
 | `TARGET_SESSIONS`     | `200`                    | capacity 模式目标 session 数   |
 | `MOCK_CHUNK_DELAY_MS` | `50`                     | Mock 每个 chunk 延迟（ms）      |
+| `MOCK_CHUNK_COUNT`    | （未设，按词拆分）               | Mock 内容 chunk 数；设后近似时长见步骤 2b |
+| `INTERVAL`            | `2`                      | metrics 采样间隔（秒）            |
+| `CHAT_TIMEOUT`        | `180s`                   | k6 单次 chat 请求超时             |
 
 
 ---
@@ -212,9 +232,12 @@ bash stress_testing/scripts/cleanup_runs.sh
 | `report-l1-concurrent-*.md` | L1 并发单次自动报告             |
 | `report-l1-capacity-*.md`   | L1 容量单次自动报告             |
 | `summary-*.json`            | k6 原始汇总                 |
-| `metrics-*.csv`             | active_streams / RSS 采样 |
-| `baseline.md`               | **手工汇总**（跨多轮结论）         |
+| `metrics-*.csv`             | active_streams / RSS 采样（本地，不入库） |
+| `baseline.md`               | **性能参考汇总**（跨多轮结论，入库）      |
+| `baseline.example.md`       | 空白模板（入库）                  |
 
+
+`results/` 目录说明见 [`results/README.md`](results/README.md)。
 
 ---
 
@@ -226,7 +249,7 @@ stress_testing/
 ├── k6/                # k6 脚本
 ├── mocks/             # Mock LLM server
 ├── scripts/           # 运行、报告、清理脚本
-└── results/           # 输出（gitignored，保留 baseline.md 模板）
+└── results/           # 压测输出（report/summary 等 gitignored；baseline 入库）
 ```
 
 ---

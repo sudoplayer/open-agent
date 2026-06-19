@@ -40,8 +40,6 @@ Execute in order. After each step, note the `Report:` path printed in the termin
 
 ```bash
 cd /path/to/open-agent
-
-# Optional: clean up leftover runs/ from previous stress tests
 bash stress_testing/scripts/cleanup_runs.sh
 ```
 
@@ -70,17 +68,14 @@ Purpose: gradually increase concurrent SSE connections to find the inflection po
 Fixed parameters: `DURATION=30s`, `MAX_SESSIONS=1000` (default). **Run each VU round before starting the next**.
 
 ```bash
-# Round 1
 VU=5  DURATION=30s npm run stress:l1
-
-# Round 2
 VU=10 DURATION=30s npm run stress:l1
-
-# Round 3
 VU=20 DURATION=30s npm run stress:l1
-
-# Round 4
 VU=50 DURATION=30s npm run stress:l1
+VU=100  DURATION=30s npm run stress:l1
+VU=200 DURATION=30s npm run stress:l1
+VU=500 DURATION=30s npm run stress:l1
+VU=1000 DURATION=30s npm run stress:l1
 ```
 
 If a round has error rate > 1% or p95 spikes sharply, stop increasing load — that VU is the inflection point reference.
@@ -91,10 +86,51 @@ If a round has error rate > 1% or p95 spikes sharply, stop increasing load — t
 |-------|-------------------|
 | Request count | Results summary → HTTP request count |
 | Error rate | Results summary → Error rate |
+| p95 http_req_waiting | Results summary → http_req_waiting p95 |
 | p95 time-to-DONE | Results summary → time_to_done p95 |
 | max active_streams | Runtime sampling → max active_streams |
 
-Finally, fill in **Recommended max concurrent SSE connections** (highest VU with error rate still < 1%, or the tier before the inflection point).
+Finally, fill in **Recommended max concurrent SSE connections** (highest VU with error rate still < 1% and acceptable p95 time-to-DONE, or the tier before the inflection point).
+
+---
+
+### Step 2b: L1 Long Mock Streams (optional, after Step 2)
+
+Purpose: simulate **long SSE streams** (tens of seconds) like real LLM responses. Do **not** change VU and stream length in the same first pass — finish the VU ladder first, then fix VU and lengthen the mock.
+
+Approximate mock stream duration:
+
+```text
+(MOCK_CHUNK_COUNT + 1) × MOCK_CHUNK_DELAY_MS
+```
+
+(`+1` is the role chunk; without `MOCK_CHUNK_COUNT`, content is split by words and stays very short.)
+
+Example — ~30s mock stream, VU=100, 5 minutes sustained:
+
+```bash
+MOCK_CHUNK_COUNT=600 MOCK_CHUNK_DELAY_MS=50 VU=100 DURATION=5m npm run stress:l1
+```
+
+Example — ~30s with fewer chunks and longer delay:
+
+```bash
+MOCK_CHUNK_COUNT=60 MOCK_CHUNK_DELAY_MS=500 VU=100 DURATION=5m npm run stress:l1
+```
+
+**Fill in baseline.md → "L1 Long Mock Streams"**: for each round, copy from `report-l1-concurrent-*.md`:
+
+| Field | Location in report |
+|-------|-------------------|
+| Request count / successful SSE | Results summary |
+| Error rate | Results summary → Error rate |
+| p95 http_req_waiting | Results summary → http_req_waiting p95 |
+| p95 http_req_receiving | Results summary → http_req_receiving p95 |
+| p95 time-to-DONE | Results summary → time_to_done p95 |
+| max active_streams | Runtime sampling → max active_streams |
+| Peak RSS (MB) | Runtime sampling → Peak RSS |
+
+Finally, fill in **Long-stream conclusions** and **Recommended long-stream concurrent SSE ceiling**.
 
 ---
 
@@ -103,7 +139,6 @@ Finally, fill in **Recommended max concurrent SSE connections** (highest VU with
 Purpose: create many unique sessions, observe RSS growth and LRU eviction, and determine the recommended `MAX_SESSIONS`.
 
 ```bash
-# Fixed MAX_SESSIONS=1000 (default), gradually increase TARGET_SESSIONS
 SCENARIO=capacity TARGET_SESSIONS=100  npm run stress:l1
 SCENARIO=capacity TARGET_SESSIONS=200  npm run stress:l1
 SCENARIO=capacity TARGET_SESSIONS=500  npm run stress:l1
@@ -148,27 +183,6 @@ Open [`results/baseline.md`](results/baseline.md) and fill in the tables and con
 
 ---
 
-## Quick Command Reference
-
-```bash
-# L0 baseline
-npm run stress:l0
-
-# L1 concurrency (default VU=10, 30s)
-npm run stress:l1
-
-# L1 concurrency — specify VU
-VU=20 DURATION=30s npm run stress:l1
-
-# L1 session capacity
-SCENARIO=capacity TARGET_SESSIONS=200 npm run stress:l1
-
-# Clean up runs/
-bash stress_testing/scripts/cleanup_runs.sh
-```
-
----
-
 ## Test Levels
 
 | Level | Command | Purpose |
@@ -192,6 +206,9 @@ bash stress_testing/scripts/cleanup_runs.sh
 | `SCENARIO` | `concurrent` | `concurrent` or `capacity` |
 | `TARGET_SESSIONS` | `200` | Target session count in capacity mode |
 | `MOCK_CHUNK_DELAY_MS` | `50` | Mock per-chunk delay (ms) |
+| `MOCK_CHUNK_COUNT` | (unset, split by words) | Number of mock content chunks; see Step 2b for duration |
+| `INTERVAL` | `2` | Metrics sampling interval (seconds) |
+| `CHAT_TIMEOUT` | `180s` | k6 per-chat request timeout |
 
 ---
 
@@ -203,8 +220,11 @@ bash stress_testing/scripts/cleanup_runs.sh
 | `report-l1-concurrent-*.md` | L1 concurrency single-run auto report |
 | `report-l1-capacity-*.md` | L1 capacity single-run auto report |
 | `summary-*.json` | k6 raw summary |
-| `metrics-*.csv` | active_streams / RSS sampling |
-| `baseline.md` | **Manual consolidation** (cross-run conclusions) |
+| `metrics-*.csv` | active_streams / RSS sampling (local, not committed) |
+| `baseline.md` | **Performance reference** (cross-run consolidation, committed) |
+| `baseline.example.md` | Empty template (committed) |
+
+See [`results/README.md`](results/README.md) for the `results/` directory layout.
 
 ---
 
@@ -216,7 +236,7 @@ stress_testing/
 ├── k6/                # k6 scripts
 ├── mocks/             # Mock LLM server
 ├── scripts/           # Run, report, and cleanup scripts
-└── results/           # Output (gitignored, baseline.md template kept)
+└── results/           # Stress test output (reports gitignored; baselines committed)
 ```
 
 ---

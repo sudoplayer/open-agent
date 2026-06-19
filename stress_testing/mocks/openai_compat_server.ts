@@ -6,6 +6,7 @@ import * as http from "http";
 
 const PORT = Number(process.env.MOCK_PORT ?? 9999);
 const CHUNK_DELAY_MS = Number(process.env.MOCK_CHUNK_DELAY_MS ?? 50);
+const CHUNK_COUNT = Number(process.env.MOCK_CHUNK_COUNT ?? 0);
 const MODEL = process.env.MOCK_MODEL_NAME ?? "deepseek-v4-flash";
 
 let requestCount = 0;
@@ -70,9 +71,14 @@ async function writeStreamingResponse(
   res.write(makeChunk(id, { role: "assistant" }));
   await sleep(CHUNK_DELAY_MS);
 
-  const words = content.split(/\s+/);
-  for (const word of words.length > 0 ? words : [content]) {
-    res.write(makeChunk(id, { content: word + " " }));
+  const chunks =
+    CHUNK_COUNT > 0
+      ? Array.from({ length: CHUNK_COUNT }, (_, i) => `chunk${i} `)
+      : content.split(/\s+/).filter(Boolean);
+  const payload = chunks.length > 0 ? chunks : [content];
+
+  for (const piece of payload) {
+    res.write(makeChunk(id, { content: piece.endsWith(" ") ? piece : piece + " " }));
     await sleep(CHUNK_DELAY_MS);
   }
 
@@ -132,7 +138,11 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, "127.0.0.1", () => {
-  console.log(`Mock LLM listening on http://127.0.0.1:${PORT}`);
+  const approxMs =
+    CHUNK_COUNT > 0 ? (CHUNK_COUNT + 1) * CHUNK_DELAY_MS : "word-count × delay";
+  console.log(
+    `Mock LLM listening on http://127.0.0.1:${PORT} (delay=${CHUNK_DELAY_MS}ms, chunks=${CHUNK_COUNT || "auto"}, ~${approxMs}ms/stream)`
+  );
 });
 
 process.on("SIGINT", () => {

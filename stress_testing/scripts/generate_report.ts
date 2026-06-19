@@ -215,8 +215,9 @@ function parseMetricsCsv(csvPath: string): MetricsStats {
   for (const line of lines) {
     const parts = line.split(",");
     if (parts.length < 3) continue;
+    // timestamp,active,rss — or legacy 5-column CSV with pending/inflight
     const streams = Number(parts[1]);
-    const rss = Number(parts[2]);
+    const rss = Number(parts.length >= 5 ? parts[4] : parts[2]);
     if (!Number.isNaN(streams)) maxActiveStreams = Math.max(maxActiveStreams, streams);
     if (!Number.isNaN(rss)) peakRssKb = Math.max(peakRssKb, rss);
   }
@@ -319,6 +320,8 @@ function buildL0Report(summary: K6Summary, stats: MetricsStats, config: RunConfi
 
 function buildL1Report(summary: K6Summary, stats: MetricsStats, config: RunConfig): string {
   const ttd = metricValues(summary, "time_to_done");
+  const httpReqWaiting = metricValues(summary, "http_req_waiting");
+  const httpReqReceiving = metricValues(summary, "http_req_receiving");
   const chatErrRate = metricRate(summary, "chat_errors");
   const httpReqs = metricValues(summary, "http_reqs");
   const sessionsCreated = metricValues(summary, "sessions_created");
@@ -344,6 +347,8 @@ function buildL1Report(summary: K6Summary, stats: MetricsStats, config: RunConfi
 | HTTP 请求数 | ${httpReqs?.count ?? "-"} |
 | 成功 SSE（[DONE]） | ${sseDone?.count ?? sessionsCreated?.count ?? "-"} |
 | 错误率 | ${fmtPct(chatErrRate)} |
+| http_req_waiting p95 (ms) | ${fmt(httpReqWaiting?.["p(95)"], 1)} |
+| http_req_receiving p95 (ms) | ${fmt(httpReqReceiving?.["p(95)"], 1)} |
 | time_to_done p95 (ms) | ${fmt(ttd?.["p(95)"], 1)} |
 | time_to_done max (ms) | ${fmt(ttd?.max, 1)} |
 | time_to_done avg (ms) | ${fmt(ttd?.avg, 1)} |
@@ -365,8 +370,8 @@ ${
 - 峰值 RSS ${fmt(stats.peakRssMb, 1)} MB；若 error rate < 1% 且无 OOM，可继续提高 TARGET_SESSIONS 探测上限
 - 生产建议 MAX_SESSIONS ≈ 稳定上限 × 0.8`
     : `- 并发 VU=${config.vu ?? "-"} 下完成 ${httpReqs?.count ?? "-"} 次 SSE 请求，错误率 ${fmtPct(chatErrRate)}
-- max active_streams=${stats.maxActiveStreams}，p95 time-to-DONE=${fmt(ttd?.["p(95)"], 1)} ms
-- 逐步提高 VU 寻找 error rate > 1% 或 p95 恶化拐点`
+- max active_streams=${stats.maxActiveStreams}，p95 http_req_waiting=${fmt(httpReqWaiting?.["p(95)"], 1)} ms，p95 time-to-DONE=${fmt(ttd?.["p(95)"], 1)} ms
+- 排队深度看 k6 http_req_waiting；逐步提高 VU 寻找 error rate > 1% 或 p95 恶化拐点`
 }
 `;
 }

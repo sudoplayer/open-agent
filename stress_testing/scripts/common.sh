@@ -44,6 +44,7 @@ wait_for_url() {
 start_mock() {
   echo "Starting mock LLM on port ${MOCK_PORT}..." >&2
   MOCK_CHUNK_DELAY_MS="${MOCK_CHUNK_DELAY_MS:-50}" \
+  MOCK_CHUNK_COUNT="${MOCK_CHUNK_COUNT:-}" \
     npx tsx "${REPO_ROOT}/stress_testing/mocks/openai_compat_server.ts" &
   MOCK_PID=$!
   wait_for_url "http://127.0.0.1:${MOCK_PORT}/health" 20
@@ -59,6 +60,7 @@ start_server() {
   LLM_API_KEY="mock-key" \
   MAX_SESSIONS="${MAX_SESSIONS}" \
   API_PORT="${API_PORT}" \
+  SCENARIO="${AGENT_SCENARIO:-demo}" \
     npx tsx "${REPO_ROOT}/src/web_server.ts" &
   SERVER_PID=$!
   wait_for_url "${BASE_URL}/health" 30
