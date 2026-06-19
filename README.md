@@ -13,7 +13,7 @@ This is an **agent platform**. You simply describe your goal in natural language
 1. 🧠 **Understand Intent** — Identify your needs
 2. 🔀 **Task Decomposition** — Break down steps by domain workflow
 3. 👷 **Multi-Agent Collaboration** — The Orchestrator schedules specialized Subagents to execute tasks
-4. 💬 **Human-in-the-Loop (HITL)** — Interactive cards pop up at key nodes, waiting for your feedback before proceeding
+4. 💬 **Human-in-the-Loop (HITL)** — Interactive cards pop up at orchestration plan and final result confirmation, waiting for your feedback before proceeding
 
 The entire workflow simulates AI multi-agent collaboration with a human-in-the-loop (HITL) pattern.
 
@@ -22,12 +22,13 @@ The entire workflow simulates AI multi-agent collaboration with a human-in-the-l
 When you send `"(1+2)/3*4"`, the system internally goes through the following steps:
 
 1. **Orchestrator Parses Intent** — Recognizes it as a mixed arithmetic expression with parentheses, addition, subtraction, multiplication, and division
-2. **Reduction by Priority** — Delegates to subagents sequentially, reducing step by step until a single result is reached:
-  - `add_agent` computes `1+2=3`, reducing the expression to `3/3*4`
-  - `divide_agent` computes `3/3=1`, reducing the expression to `1*4`
-  - `multiply_agent` computes `1*4=4`
-3. **Human Confirmation (HITL)** — Each sub-step displays an option card for you to confirm the intermediate result
-4. **Return Final Result** — `4`
+2. **Orchestration Plan Confirmation (HITL)** — Shows the operation order using intermediate variables (e.g. `a`, `b`, `c`) without pre-computed results; you confirm before execution
+3. **Reduction by Priority** — Delegates to subagents sequentially per the confirmed plan:
+  - `add_agent`: `1+2` → `a`
+  - `divide_agent`: `a/3` → `b`
+  - `multiply_agent`: `b*4` → final result
+4. **Final Result Confirmation (HITL)** — Shows the full step-by-step trace and final result; you confirm before saving
+5. **Save Output** — Choose a working directory and save `result.md`
 
 Throughout the process, SSE streaming output displays the Orchestrator's reasoning and the subagents' execution progress in real time.
 
@@ -40,7 +41,7 @@ The platform is **agent-agnostic** — it connects to different domains by repla
 
 | Agent                | Description                                                                                      |
 | -------------------- | ------------------------------------------------------------------------------------------------ |
-| 📋 **Calculator (default)** | AI scientific calculator — multi-agent orchestration and HITL (arithmetic, power, exp, log, trig) |
+| 📋 **Calculator (default)** | AI scientific calculator — orchestrator-level HITL (plan + result confirmation); subagents run tools only (arithmetic, power, exp, log, trig) |
 | 🔧 **Your Agent**      | Write `manifest.yaml` + skills in `agents/` to plug in any domain                               |
 
 
