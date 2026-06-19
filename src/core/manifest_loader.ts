@@ -18,7 +18,7 @@ export interface OrchestratorDef {
   tools: string[];
 }
 
-export interface ScenarioManifest {
+export interface AgentManifest {
   id: string;
   displayName: string;
   modelId: string;
@@ -26,49 +26,37 @@ export interface ScenarioManifest {
   subagents: SubagentDef[];
 }
 
-function skillRootFor(scenarioId: string): string {
-  return path.join(CONFIG.scenariosRoot, scenarioId, "skills");
+function skillRoot(): string {
+  return path.join(CONFIG.agentsRoot, "skills");
 }
 
-// 将短技能名展开为绝对路径（约定：scenarios/<id>/skills/<name>）
-function resolveSkillPaths(
-  names: string[],
-  scenarioId: string
-): string[] {
-  const root = skillRootFor(scenarioId);
+function resolveSkillPaths(names: string[]): string[] {
+  const root = skillRoot();
   return names.map((name) => path.join(root, name));
 }
 
-export function loadManifest(scenarioId: string): ScenarioManifest {
-  const manifestPath = path.join(CONFIG.scenariosRoot, scenarioId, "manifest.yaml");
+export function loadManifest(): AgentManifest {
+  const manifestPath = path.join(CONFIG.agentsRoot, "manifest.yaml");
   if (!fs.existsSync(manifestPath)) {
     throw new Error(`Manifest not found: ${manifestPath}`);
   }
 
   const raw = yaml.load(fs.readFileSync(manifestPath, "utf-8")) as Record<string, unknown>;
 
-  // orchestrator
   const orch = (raw["orchestrator"] as Record<string, unknown>) ?? {};
   const orchestrator: OrchestratorDef = {
     systemPrompt: String(orch["system_prompt"] ?? ""),
-    skills: resolveSkillPaths(
-      (orch["skills"] as string[]) ?? [],
-      scenarioId
-    ),
+    skills: resolveSkillPaths((orch["skills"] as string[]) ?? []),
     tools: (orch["tools"] as string[]) ?? [],
   };
 
-  // subagents
   const subagents: SubagentDef[] = ((raw["subagents"] as Record<string, unknown>[]) ?? []).map(
     (subagent) => {
       return {
         name: String(subagent["name"]),
         description: String(subagent["description"] ?? ""),
         systemPrompt: String(subagent["system_prompt"] ?? ""),
-        skills: resolveSkillPaths(
-          (subagent["skills"] as string[]) ?? [],
-          scenarioId
-        ),
+        skills: resolveSkillPaths((subagent["skills"] as string[]) ?? []),
         tools: (subagent["tools"] as string[]) ?? [],
       };
     }

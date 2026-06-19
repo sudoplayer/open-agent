@@ -29,7 +29,7 @@ if [ -f "${MARKER}" ]; then
   exit 0
 fi
 
-# Deterministic capacity sessions: load-cap-user + load-cap-chat-XXXXXX + demo
+# Deterministic capacity sessions: load-cap-user + load-cap-chat-XXXXXX + calculator
 if [ "${1:-}" = "--capacity" ]; then
   TARGET="${2:-200}"
   echo "Removing capacity test sessions (target=${TARGET})..."
@@ -42,7 +42,7 @@ if [ "${1:-}" = "--capacity" ]; then
     let removed = 0;
     for (let i = 1; i <= target; i++) {
       const chatId = 'load-cap-chat-' + String(i).padStart(6, '0');
-      const raw = 'load-cap-user:' + chatId + ':demo';
+      const raw = 'load-cap-user:' + chatId + ':calculator';
       const id = crypto.createHash('sha256').update(raw, 'utf-8').digest('hex').slice(0, 32);
       const dir = path.join(runs, id);
       if (fs.existsSync(dir)) { fs.rmSync(dir, { recursive: true, force: true }); removed++; }

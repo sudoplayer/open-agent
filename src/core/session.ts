@@ -39,7 +39,7 @@ export class SessionEntry {
 
   getOrchestrator(): OrchestratorGraph {
     if (this._orchestrator === null) {
-      const manifest = loadManifest(CONFIG.scenario);
+      const manifest = loadManifest();
       this._orchestrator = buildOrchestratorFromManifest(
         manifest,
         this.session.sessionId,

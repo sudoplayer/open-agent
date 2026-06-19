@@ -39,13 +39,13 @@
 
 ## 🎯 它能做什么？
 
-平台本身是**场景无关的** — 通过 **Scenario System** 接入不同领域：
+平台本身是**业务无关的** — 通过替换 **`agents/`** 目录接入不同领域：
 
 
-| 场景             | 描述                                                                                      |
-| ---------------- | ------------------------------------------------------------------------------------------------ |
-| 📋 **Demo**      | AI 计算器 — 演示多智能体编排与人机协作的最小验证场景 |
-| 🔧 **你的场景**  | 编写 `manifest.yaml` + skills，即可接入任意领域 |
+| Agent              | 描述                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------------ |
+| 📋 **Calculator（默认）** | AI 科学计算器 — 演示多智能体编排与人机协作（四则、幂、指数、对数、三角函数） |
+| 🔧 **你的 Agent**   | 在 `agents/` 中编写 `manifest.yaml` + skills，即可接入任意领域 |
 
 
 ---
@@ -91,27 +91,25 @@ curl http://localhost:8888/v1/models
 | `LLM_API_KEY`    | —                          | DeepSeek API 密钥               |
 | `MODEL_NAME`     | `deepseek-v4-flash`        | 使用的模型名称                        |
 | `MODEL_BASE_URL` | `https://api.deepseek.com` | API 地址                          |
-| `SCENARIO`       | `demo`                     | 加载的场景名称，对应 `scenarios/<name>/` |
 | `API_PORT`       | `8888`                     | 服务监听端口                         |
 
 
 ---
 
-## 🧩 场景系统（Scenario System）
+## 🧩 Agent 定义
 
-平台核心与业务逻辑完全分离。每个场景是一个独立目录，声明式定义一切：
+平台核心与业务逻辑完全分离。部署的 agent 在 `agents/` 中声明式定义：
 
 ```
-scenarios/<你的场景>/
-├── manifest.yaml    # 场景清单：智能体、工具、技能
-├── config.yaml      # 场景特定配置
+agents/
+├── manifest.yaml    # Agent 清单：编排器、子智能体、工具、技能
 ├── skills/          # 各智能体的技能指令（SKILL.md）+ 脚本
-├── tools/           # 场景专属工具工厂（index.ts）
+└── tools/           # Agent 专属工具工厂（index.ts）
 ```
 
-切换场景只需设置环境变量 `SCENARIO=<name>`，零代码修改。
+要部署不同的 agent，替换 `agents/` 目录内容并重启即可 — 无需改代码或环境变量。
 
-想开发新场景？参考 `scenarios/demo/` 起步，或直接问我 😄
+默认 `agents/` 目录包含 AI 计算器 demo，可作为参考，或直接问我 😄
 
 ---
 
@@ -142,7 +140,7 @@ curl http://localhost:8888/health
 ```json
 {
   "status": "healthy",
-  "service": "<场景 display_name>",
+  "service": "<agent display_name>",
   "version": "v1.0",
   "active_streams": 0
 }
@@ -161,7 +159,7 @@ curl http://localhost:8888/v1/models
   "object": "list",
   "data": [
     {
-      "id": "<场景 model_id>",
+      "id": "<agent model_id>",
       "object": "model",
       "created": 1700000000,
       "owned_by": "Open Agent Platform"
@@ -170,7 +168,7 @@ curl http://localhost:8888/v1/models
 }
 ```
 
-> 模型 ID 由当前加载的场景的 `manifest.yaml` 中的 `model_id` 决定。例如 Demo 场景返回 `calculator-demo`。
+> 模型 ID 由 `agents/manifest.yaml` 中的 `model_id` 决定。例如默认 AI 计算器 agent 返回 `calculator`。
 
 ---
 
@@ -185,8 +183,7 @@ curl http://localhost:8888/v1/models
 │   ├── infra/          # 基础设施（SSE 流管理、LangGraph 检查点）
 │   └── openwebui/      # OpenWebUI 集成（元数据转发 filter）
 │
-├── scenarios/       # 业务场景（按领域隔离）
-│   └── demo/           # AI 计算器 — manifest + skills + tools
+├── agents/          # Agent 定义（manifest + skills + tools）
 │
 ├── frontend/        # 前端组件（nginx 注入到 OpenWebUI）
 ├── nginx/           # 反向代理配置

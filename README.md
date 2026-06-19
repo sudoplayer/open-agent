@@ -35,13 +35,13 @@ Throughout the process, SSE streaming output displays the Orchestrator's reasoni
 
 ## 🎯 What Can It Do?
 
-The platform is **scenario-agnostic** — it connects to different domains via the **Scenario System**:
+The platform is **agent-agnostic** — it connects to different domains by replacing the **`agents/`** directory:
 
 
-| Scenario             | Description                                                                                      |
+| Agent                | Description                                                                                      |
 | -------------------- | ------------------------------------------------------------------------------------------------ |
-| 📋 **Demo**          | AI Calculator — a minimal verification scenario demonstrating multi-agent orchestration and HITL |
-| 🔧 **Your Scenario** | Write `manifest.yaml` + skills to plug in any domain                                             |
+| 📋 **Calculator (default)** | AI scientific calculator — multi-agent orchestration and HITL (arithmetic, power, exp, log, trig) |
+| 🔧 **Your Agent**      | Write `manifest.yaml` + skills in `agents/` to plug in any domain                               |
 
 
 ---
@@ -87,27 +87,25 @@ curl http://localhost:8888/v1/models
 | `LLM_API_KEY`    | —                          | DeepSeek API key                                          |
 | `MODEL_NAME`     | `deepseek-v4-flash`        | Model name to use                                         |
 | `MODEL_BASE_URL` | `https://api.deepseek.com` | API base URL                                              |
-| `SCENARIO`       | `demo`                     | Scenario name to load, corresponds to `scenarios/<name>/` |
 | `API_PORT`       | `8888`                     | Service listening port                                    |
 
 
 ---
 
-## 🧩 Scenario System
+## 🧩 Agent Definition
 
-The platform core is fully decoupled from business logic. Each scenario is an independent directory, declaratively defining everything:
+The platform core is fully decoupled from business logic. The deployed agent is defined declaratively in `agents/`:
 
 ```
-scenarios/<your-scenario>/
-├── manifest.yaml    # Scenario manifest: agents, tools, skills
-├── config.yaml      # Scenario-specific configuration
+agents/
+├── manifest.yaml    # Agent manifest: orchestrator, subagents, tools, skills
 ├── skills/          # Skill instructions (SKILL.md) + scripts for each agent
-├── tools/           # Scenario-specific tool factories (index.ts)
+└── tools/           # Agent-specific tool factories (index.ts)
 ```
 
-Switching scenarios only requires setting the environment variable `SCENARIO=<name>` — zero code changes.
+To deploy a different agent, replace the contents of `agents/` and restart — no code or env changes required.
 
-Want to develop a new scenario? Refer to `scenarios/demo/` to get started, or just ask me 😄
+The default `agents/` directory ships with an AI Calculator demo. Use it as a reference, or just ask me 😄
 
 ---
 
@@ -138,7 +136,7 @@ Response:
 ```json
 {
   "status": "healthy",
-  "service": "<scenario display_name>",
+  "service": "<agent display_name>",
   "version": "v1.0",
   "active_streams": 0
 }
@@ -157,7 +155,7 @@ Response:
   "object": "list",
   "data": [
     {
-      "id": "<scenario model_id>",
+      "id": "<agent model_id>",
       "object": "model",
       "created": 1700000000,
       "owned_by": "Open Agent Platform"
@@ -166,7 +164,7 @@ Response:
 }
 ```
 
-> The model ID is determined by the `model_id` field in the currently loaded scenario's `manifest.yaml`. For example, the Demo scenario returns `calculator-demo`.
+> The model ID is determined by the `model_id` field in `agents/manifest.yaml`. For example, the default AI Calculator agent returns `calculator`.
 
 ---
 
@@ -181,8 +179,7 @@ Response:
 │   ├── infra/          # Infrastructure (SSE stream management, LangGraph checkpoints)
 │   └── openwebui/      # OpenWebUI integration (metadata forwarding filter)
 │
-├── scenarios/       # Business scenarios (isolated by domain)
-│   └── demo/           # AI Calculator — manifest + skills + tools
+├── agents/          # Agent definition (manifest + skills + tools)
 │
 ├── frontend/        # Frontend components (nginx-injected into OpenWebUI)
 ├── nginx/           # Reverse proxy configuration

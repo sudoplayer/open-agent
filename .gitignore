@@ -3,6 +3,7 @@ node_modules/
 
 # Environment
 .env
+.webui_secret_key
 
 # Python cache
 __pycache__/
@@ -17,4 +18,5 @@ runs/
 # Debug utils
 debug.md
 
-
+# nginx
+nginx/nginx.conf

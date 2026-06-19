@@ -4,14 +4,12 @@ import dotenv from "dotenv";
 export const PROJECT_ROOT = path.resolve(__dirname, "..");
 dotenv.config({ path: path.join(PROJECT_ROOT, ".env") });
 
-const SCENARIO = process.env.SCENARIO ?? "demo";
 const API_PORT = Number(process.env.API_PORT ?? 8888);
 const PUBLIC_API_BASE_URL = `http://127.0.0.1:${API_PORT}`;
 
 export interface IConfig {
-  readonly scenario: string;
   readonly projectRoot: string;
-  readonly scenariosRoot: string;
+  readonly agentsRoot: string;
   readonly baseRunPath: string;
   readonly modelBaseUrl: string;
   readonly modelName: string;
@@ -25,9 +23,8 @@ export interface IConfig {
 }
 
 class Config implements IConfig {
-  readonly scenario = SCENARIO;
   readonly projectRoot = PROJECT_ROOT;
-  readonly scenariosRoot = path.join(PROJECT_ROOT, "scenarios");
+  readonly agentsRoot = path.join(PROJECT_ROOT, "agents");
   readonly baseRunPath = path.join(PROJECT_ROOT, "runs");
   readonly modelBaseUrl = process.env.MODEL_BASE_URL ?? "https://api.deepseek.com";
   readonly modelName = process.env.MODEL_NAME ?? "deepseek-v4-flash";
@@ -35,7 +32,7 @@ class Config implements IConfig {
   readonly temperature = 0;
   readonly thinkingEnabled = false;
   readonly recursionLimit = 1000;
-  readonly maxSessions = 100;
+  readonly maxSessions = 1000;
   readonly apiPort = API_PORT;
   readonly publicApiBaseUrl = PUBLIC_API_BASE_URL;
 }

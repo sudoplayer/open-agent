@@ -1,0 +1,119 @@
+# AI Calculator — 多智能体科学计算器（含 HITL 用户确认）
+id: calculator
+display_name: calculator
+model_id: calculator
+
+orchestrator:
+  system_prompt: |
+    你是 AI 计算器的主编排智能体。你的职责是接收用户的代数表达式（含四则运算、幂运算、
+    指数/对数、三角函数与括号），按运算优先级逐步委托给子智能体计算，并将结果代回直至归约为单一数值。
+
+    严格遵循 orchestration skill 中定义的流程。禁止自己心算，禁止调用 general-purpose。
+    请用中文与用户交流。
+  skills:
+    - orchestration
+  tools:
+    - platform.ask_user_question
+    - platform.request_file_path
+    - platform.stream_image
+
+subagents:
+  - name: add_agent
+    description: 执行两个数的加法运算，计算后向用户确认结果。
+    system_prompt: |
+      你是加法子智能体。严格遵循 add skill 中定义的流程和反馈处理规则。
+      禁止心算，必须调用工具。
+    skills:
+      - add
+    tools:
+      - platform.ask_user_question
+
+  - name: subtract_agent
+    description: 执行两个数的减法运算，计算后向用户确认结果。
+    system_prompt: |
+      你是减法子智能体。严格遵循 subtract skill 中定义的流程和反馈处理规则。
+      禁止心算，必须调用工具。
+    skills:
+      - subtract
+    tools:
+      - platform.ask_user_question
+
+  - name: multiply_agent
+    description: 执行两个数的乘法运算，计算后向用户确认结果。
+    system_prompt: |
+      你是乘法子智能体。严格遵循 multiply skill 中定义的流程和反馈处理规则。
+      禁止心算，必须调用工具。
+    skills:
+      - multiply
+    tools:
+      - platform.ask_user_question
+
+  - name: divide_agent
+    description: 执行两个数的除法运算，计算后向用户确认结果。除数为零时直接报错。
+    system_prompt: |
+      你是除法子智能体。严格遵循 divide skill 中定义的流程和反馈处理规则。
+      注意：除数为零时工具直接返回错误，无需用户确认。禁止心算，必须调用工具。
+    skills:
+      - divide
+    tools:
+      - platform.ask_user_question
+
+  - name: power_agent
+    description: 执行两个数的幂运算 a^b，含 sqrt(x) 归约为 x^0.5，计算后向用户确认结果。
+    system_prompt: |
+      你是幂运算子智能体。严格遵循 power skill 中定义的流程和反馈处理规则。
+      注意：域错误时工具直接返回错误，无需用户确认。禁止心算，必须调用工具。
+    skills:
+      - power
+    tools:
+      - platform.ask_user_question
+
+  - name: exp_agent
+    description: 执行可指定底数的指数运算 base^x，计算后向用户确认结果。
+    system_prompt: |
+      你是指数子智能体。严格遵循 exp skill 中定义的流程和反馈处理规则。
+      注意：域错误时工具直接返回错误，无需用户确认。禁止心算，必须调用工具。
+    skills:
+      - exp
+    tools:
+      - platform.ask_user_question
+
+  - name: log_agent
+    description: 执行可指定底数的对数运算 log_base(value)，计算后向用户确认结果。
+    system_prompt: |
+      你是对数子智能体。严格遵循 log skill 中定义的流程和反馈处理规则。
+      注意：域错误时工具直接返回错误，无需用户确认。禁止心算，必须调用工具。
+    skills:
+      - log
+    tools:
+      - platform.ask_user_question
+
+  - name: sin_agent
+    description: 执行正弦运算 sin(x)（弧度制），计算后向用户确认结果。
+    system_prompt: |
+      你是正弦子智能体。严格遵循 sin skill 中定义的流程和反馈处理规则。
+      禁止心算，必须调用工具。
+    skills:
+      - sin
+    tools:
+      - platform.ask_user_question
+
+  - name: cos_agent
+    description: 执行余弦运算 cos(x)（弧度制），计算后向用户确认结果。
+    system_prompt: |
+      你是余弦子智能体。严格遵循 cos skill 中定义的流程和反馈处理规则。
+      禁止心算，必须调用工具。
+    skills:
+      - cos
+    tools:
+      - platform.ask_user_question
+
+  - name: tan_agent
+    description: 执行正切运算 tan(x)（弧度制），计算后向用户确认结果。
+    system_prompt: |
+      你是正切子智能体。严格遵循 tan skill 中定义的流程和反馈处理规则。
+      注意：无定义或溢出时工具直接返回错误，无需用户确认。禁止心算，必须调用工具。
+    skills:
+      - tan
+    tools:
+      - platform.ask_user_question

@@ -1,0 +1,86 @@
+# nginx configuration for conda deployment (generated from template)
+# Usage:
+#   ./start_frontend.sh
+# Variables substituted at runtime: REPO_DIR, CONDA_BASE, NGINX_RUNTIME_DIR
+
+worker_processes  auto;
+error_log   ${NGINX_RUNTIME_DIR}/logs/error.log warn;
+pid         ${NGINX_RUNTIME_DIR}/nginx.pid;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    include       ${CONDA_BASE}/envs/nginx/etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    sendfile        on;
+    keepalive_timeout  65;
+
+    client_body_temp_path   ${NGINX_RUNTIME_DIR}/tmp/client;
+    proxy_temp_path         ${NGINX_RUNTIME_DIR}/tmp/proxy;
+    fastcgi_temp_path       ${NGINX_RUNTIME_DIR}/tmp/fastcgi;
+    uwsgi_temp_path         ${NGINX_RUNTIME_DIR}/tmp/uwsgi;
+    scgi_temp_path          ${NGINX_RUNTIME_DIR}/tmp/scgi;
+
+    server {
+        listen       3066;
+        server_name  _;
+
+        # ---------- JS injection (HITL cards) ----------
+        sub_filter '<head>'
+            '<head><script src="/ask_question.js?v=1.0.0"></script><script src="/request_file_path.js?v=1.0.0"></script>';
+        sub_filter_once on;
+        sub_filter_types text/html;
+
+        location /ask_question.js {
+            alias ${REPO_DIR}/frontend/ask_question.js;
+            add_header Cache-Control "no-store, no-cache, must-revalidate";
+        }
+
+        location /request_file_path.js {
+            alias ${REPO_DIR}/frontend/request_file_path.js;
+            add_header Cache-Control "no-store, no-cache, must-revalidate";
+        }
+
+        # ---------- Backend platform (AI agent orchestration) ----------
+        location /v1/fs/ {
+            proxy_pass http://127.0.0.1:8888;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        # ---------- OpenWebUI API ----------
+        location /api/ {
+            proxy_pass http://127.0.0.1:3088;
+            proxy_set_header Accept-Encoding "";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_buffering off;
+            proxy_cache off;
+            proxy_read_timeout 3600s;
+        }
+
+        # ---------- OpenWebUI pages ----------
+        location / {
+            proxy_pass http://127.0.0.1:3088;
+            proxy_set_header Accept-Encoding "";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_cache off;
+            proxy_read_timeout 3600s;
+        }
+    }
+}

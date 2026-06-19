@@ -4,7 +4,7 @@ import { ChatOpenAI } from "@langchain/openai";
 import type { StructuredTool } from "@langchain/core/tools";
 import { CONFIG } from "../config";
 import { WORKFLOW_CHECKPOINTER } from "../infra/workflow_checkpointer";
-import { ScenarioManifest } from "./manifest_loader";
+import { AgentManifest } from "./manifest_loader";
 import * as path from "path";
 import { makeAskUserQuestionTool } from "./tools/ask_user_question";
 import { makeRequestFilePathTool } from "./tools/request_file_path";
@@ -45,8 +45,8 @@ function resolveToolFactory(toolRef: string): ToolFactory {
     return factory;
   }
 
-  // Scenario tools: bare name, loaded from current scenario's tools/index.ts
-  const modPath = path.join(CONFIG.scenariosRoot, CONFIG.scenario, "tools", "index");
+  // Agent tools: bare name, loaded from agents/tools/index.ts
+  const modPath = path.join(CONFIG.agentsRoot, "tools", "index");
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const mod = require(modPath);
   const factories: Record<string, ToolFactory> = mod.toolFactories ?? {};
@@ -54,7 +54,7 @@ function resolveToolFactory(toolRef: string): ToolFactory {
   if (!factory) {
     const available = Object.keys(factories).join(", ") || "(none)";
     throw new Error(
-      `Unknown scenario tool: "${toolRef}" (scenario="${CONFIG.scenario}"). ` +
+      `Unknown agent tool: "${toolRef}". ` +
       `Available: ${available}`
     );
   }
@@ -72,7 +72,7 @@ function instantiateTool(
 
 
 export function buildOrchestratorFromManifest(
-  manifest: ScenarioManifest,
+  manifest: AgentManifest,
   sessionId: string,
   sessionRunPath: string
 ) {

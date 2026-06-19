@@ -12,7 +12,7 @@ import { streamManager } from "infra/stream_manager";
 import { runUntilInterrupt, hasPendingInterrupt, isWorkflowDone, makeConfig } from "agents/runner";
 import { Command } from "@langchain/langgraph";
 
-const _manifest = loadManifest(CONFIG.scenario);
+const _manifest = loadManifest();
 
 const _sessions = new SessionStore();
 
