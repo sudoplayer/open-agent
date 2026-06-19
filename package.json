@@ -6,7 +6,9 @@
     "start": "tsx src/web_server.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "stress:l0": "bash stress_testing/scripts/run_l0.sh",
+    "stress:l1": "bash stress_testing/scripts/run_l1_mock.sh"
   },
   "dependencies": {
     "deepagents": "latest",
