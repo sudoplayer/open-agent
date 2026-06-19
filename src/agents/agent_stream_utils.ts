@@ -81,7 +81,6 @@ const SILENT_INVOKE_TOOLS = new Set([
   "ask_user_question",
   "request_file_path",
   "stream_image",
-  "show_file",
 ]);
 const SILENT_RESULT_TOOLS = new Set([
   "ls",
@@ -90,7 +89,6 @@ const SILENT_RESULT_TOOLS = new Set([
   "ask_user_question",
   "request_file_path",
   "stream_image",
-  "show_file",
 ]);
 
 export function handleAgentStreamEvent(

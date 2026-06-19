@@ -8,7 +8,6 @@ import { ScenarioManifest } from "./manifest_loader";
 import * as path from "path";
 import { makeAskUserQuestionTool } from "./tools/ask_user_question";
 import { makeRequestFilePathTool } from "./tools/request_file_path";
-import { makeShowFileTool } from "./tools/show_file";
 import { makeStreamImageTool } from "./tools/stream_image";
 
 
@@ -31,7 +30,6 @@ type ToolFactory = (sessionId: string, sessionRunPath: string, ...args: unknown[
 const PLATFORM_TOOL_FACTORIES: Record<string, ToolFactory> = {
   ask_user_question: makeAskUserQuestionTool as ToolFactory,
   request_file_path: makeRequestFilePathTool as ToolFactory,
-  show_file: makeShowFileTool as ToolFactory,
   stream_image: makeStreamImageTool as ToolFactory,
 };
 
