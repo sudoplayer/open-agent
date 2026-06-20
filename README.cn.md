@@ -8,6 +8,8 @@
 
 > 用自然语言描述你的目标，AI 智能体自动完成剩下的工作。
 
+![Open Agent Platform Demo](./assets/demo.gif)
+
 ---
 
 ## ✨ 这是什么？

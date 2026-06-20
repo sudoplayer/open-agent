@@ -4,6 +4,8 @@
 
 > Describe your goal in natural language, and the AI agents take care of the rest.
 
+![Open Agent Platform Demo](./assets/demo.gif)
+
 ---
 
 ## ✨ What Is This?
