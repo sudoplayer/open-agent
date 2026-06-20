@@ -9,7 +9,7 @@ import { CONFIG } from "config";
 import { SessionEntry, SessionStore, buildSessionId } from "core/session";
 import { loadManifest } from "core/manifest_loader";
 import { streamManager } from "infra/stream_manager";
-import { runUntilInterrupt, hasPendingInterrupt, isWorkflowDone, makeConfig } from "agents/runner";
+import { runUntilInterrupt, hasPendingInterrupt, makeConfig } from "agents/runner";
 import { Command } from "@langchain/langgraph";
 
 const _manifest = loadManifest();
@@ -21,9 +21,6 @@ async function runWorkflowTurn(entry: SessionEntry, cmdOrInputs: unknown): Promi
   const orchestrator = entry.getOrchestrator();
   try {
     await runUntilInterrupt(orchestrator, cmdOrInputs, sessionId);
-    if (await isWorkflowDone(orchestrator, sessionId)) {
-      streamManager.streamOutput("\n\n✅ Workflow completed!\n\n", sessionId);
-    }
   } catch (e) {
     console.error(`Workflow turn failed for session ${sessionId}:`, e);
     streamManager.streamOutput(`\n\n❌ Workflow failed: ${String(e)}\n\n`, sessionId);
@@ -231,7 +228,7 @@ app.post<{ Body: ChatCompletionRequest }>("/v1/chat/completions", async (request
   const latestUserMessage = userMessages[userMessages.length - 1]?.content ?? "";
 
   streamManager.beginStream(reply, sessionId);
-  streamManager.streamOutput(`\n\n🔑 session_id: ${sessionId}\n\n`, sessionId);
+  // streamManager.streamOutput(`\n\n🔑 session_id: ${sessionId}\n\n`, sessionId);
 
   const isResume = await hasPendingInterrupt(orchestrator, sessionId);
   if (isResume) streamManager.setResuming(sessionId, true);

@@ -23,6 +23,17 @@
   const SCAN_DEBOUNCE_MS = 150;
   const FALLBACK_SCAN_MS = 800;
 
+  const THEME = {
+    bg: "#FFF8E7",
+    surface: "#FFFBF0",
+    border: "#E8DCC8",
+    borderLight: "#EDE4D0",
+    hover: "#F5E8C8",
+    selected: "#EDD9A8",
+    secondaryBorder: "#D4C4A8",
+    secondaryText: "#6B5344",
+  };
+
   function escapeSelectorValue(value) {
     return String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   }
@@ -244,9 +255,9 @@
       "box-sizing: border-box",
       "margin: 8px 0",
       "padding: 10px 14px",
-      "border: 1px solid #d0d7de",
+      "border: 1px solid " + THEME.border,
       "border-radius: 8px",
-      "background: #f6f8fa",
+      "background: " + THEME.bg,
       "max-width: 640px",
       "font-family: system-ui, -apple-system, Segoe UI, sans-serif",
       "pointer-events: none",
@@ -367,7 +378,7 @@
       if (i < segments.length - 1) {
         const sep = document.createElement("span");
         sep.textContent = "/";
-        sep.style.color = "#d0d7de";
+        sep.style.color = THEME.borderLight;
         nav.appendChild(sep);
       }
     });
@@ -378,11 +389,11 @@
   function buildEntryList(entries, currentPath, state, onNavigate) {
     const list = document.createElement("div");
     list.style.cssText = [
-      "border: 1px solid #d0d7de",
+      "border: 1px solid " + THEME.border,
       "border-radius: 6px",
       "overflow-y: auto",
       "max-height: 240px",
-      "background: #ffffff",
+      "background: " + THEME.surface,
       "margin-bottom: 10px",
     ].join(";");
 
@@ -405,7 +416,7 @@
         "padding: 7px 12px",
         "cursor: pointer",
         "font-size: 0.875em",
-        "border-bottom: 1px solid #f0f0f0",
+        "border-bottom: 1px solid " + THEME.borderLight,
         "user-select: none",
       ].join(";");
 
@@ -426,15 +437,15 @@
       row.appendChild(arrow);
 
       row.addEventListener("mouseenter", () => {
-        row.style.background = state.selectedPath === fullPath ? "#cce5ff" : "#f0f6ff";
+        row.style.background = state.selectedPath === fullPath ? THEME.selected : THEME.hover;
       });
       row.addEventListener("mouseleave", () => {
-        row.style.background = state.selectedPath === fullPath ? "#ddf4ff" : "";
+        row.style.background = state.selectedPath === fullPath ? THEME.selected : "";
       });
 
       row.addEventListener("click", () => {
         list.querySelectorAll("div").forEach((r) => (r.style.background = ""));
-        row.style.background = "#ddf4ff";
+        row.style.background = THEME.selected;
         state.selectedPath = fullPath;
         onNavigate(fullPath, false);  // false = select only, don't navigate
       });
@@ -444,7 +455,7 @@
       });
 
       if (state.selectedPath === fullPath) {
-        row.style.background = "#ddf4ff";
+        row.style.background = THEME.selected;
       }
 
       list.appendChild(row);
@@ -505,9 +516,9 @@
       "box-sizing: border-box",
       "margin: 12px 0",
       "padding: 16px",
-      "border: 1px solid #d0d7de",
+      "border: 1px solid " + THEME.border,
       "border-radius: 12px",
-      "background: #f6f8fa",
+      "background: " + THEME.bg,
       "max-width: 640px",
       "font-family: system-ui, -apple-system, Segoe UI, sans-serif",
     ].join(";");
@@ -530,10 +541,10 @@
     upBtn.textContent = "↑ 上一级";
     upBtn.style.cssText = [
       "padding: 4px 10px",
-      "border: 1px solid #d0d7de",
+      "border: 1px solid " + THEME.secondaryBorder,
       "border-radius: 6px",
-      "background: #ffffff",
-      "color: #24292f",
+      "background: " + THEME.surface,
+      "color: " + THEME.secondaryText,
       "cursor: pointer",
       "font-size: 0.8em",
     ].join(";");
@@ -548,7 +559,8 @@
 
     const listPlaceholder = document.createElement("div");
     listPlaceholder.setAttribute("data-rfp-list", "true");
-    listPlaceholder.style.cssText = "border: 1px solid #d0d7de; border-radius: 6px; height: 40px; background: #fff;";
+    listPlaceholder.style.cssText =
+      "border: 1px solid " + THEME.border + "; border-radius: 6px; height: 40px; background: " + THEME.surface + ";";
     widget.appendChild(listPlaceholder);
 
     const inputRow = document.createElement("div");
@@ -562,10 +574,11 @@
       "flex: 1",
       "min-width: 0",
       "padding: 8px 10px",
-      "border: 1px solid #d0d7de",
+      "border: 1px solid " + THEME.border,
       "border-radius: 8px",
       "font-size: 0.875em",
       "font-family: monospace",
+      "background: " + THEME.surface,
     ].join(";");
 
     const goBtn = document.createElement("button");
@@ -574,10 +587,10 @@
     goBtn.title = "跳转到输入的路径";
     goBtn.style.cssText = [
       "padding: 8px 12px",
-      "border: 1px solid #d0d7de",
+      "border: 1px solid " + THEME.secondaryBorder,
       "border-radius: 8px",
-      "background: #ffffff",
-      "color: #24292f",
+      "background: " + THEME.surface,
+      "color: " + THEME.secondaryText,
       "cursor: pointer",
       "font-size: 0.875em",
       "white-space: nowrap",

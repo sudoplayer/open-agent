@@ -23,6 +23,17 @@
   const SCAN_DEBOUNCE_MS = 150;
   const FALLBACK_SCAN_MS = 800;
 
+  const THEME = {
+    bg: "#FFF8E7",
+    surface: "#FFFBF0",
+    border: "#E8DCC8",
+    borderLight: "#EDE4D0",
+    hover: "#F5E8C8",
+    selected: "#EDD9A8",
+    secondaryBorder: "#D4C4A8",
+    secondaryText: "#6B5344",
+  };
+
   function escapeSelectorValue(value) {
     return String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   }
@@ -246,9 +257,9 @@
       "box-sizing: border-box",
       "margin: 8px 0",
       "padding: 10px 14px",
-      "border: 1px solid #d0d7de",
+      "border: 1px solid " + THEME.border,
       "border-radius: 8px",
-      "background: #f6f8fa",
+      "background: " + THEME.bg,
       "max-width: 640px",
       "font-family: system-ui, -apple-system, Segoe UI, sans-serif",
       "pointer-events: none",
@@ -340,9 +351,9 @@
       "box-sizing: border-box",
       "margin: 12px 0",
       "padding: 16px",
-      "border: 1px solid #d0d7de",
+      "border: 1px solid " + THEME.border,
       "border-radius: 12px",
-      "background: #f6f8fa",
+      "background: " + THEME.bg,
       "max-width: 640px",
       "font-family: system-ui, -apple-system, Segoe UI, sans-serif",
       "transition: opacity 150ms ease",
@@ -373,10 +384,10 @@
       btn.textContent = option;
       btn.style.cssText = [
         "padding: 8px 12px",
-        "border: 1px solid #0969da",
+        "border: 1px solid " + THEME.secondaryBorder,
         "border-radius: 8px",
-        "background: #ffffff",
-        "color: #0969da",
+        "background: " + THEME.surface,
+        "color: " + THEME.secondaryText,
         "cursor: pointer",
       ].join(";");
       btn.addEventListener("click", () => handleSubmit(option));
@@ -391,8 +402,9 @@
       "width: 100%",
       "box-sizing: border-box",
       "padding: 8px 10px",
-      "border: 1px solid #d0d7de",
+      "border: 1px solid " + THEME.border,
       "border-radius: 8px",
+      "background: " + THEME.surface,
     ].join(";");
     customInput.addEventListener("keydown", (event) => {
       if (event.key !== "Enter") return;
