@@ -91,7 +91,17 @@ curl http://localhost:8888/v1/models
 | `MODEL_NAME`     | `deepseek-v4-flash`        | Model name to use                                         |
 | `MODEL_BASE_URL` | `https://api.deepseek.com` | API base URL                                              |
 | `API_PORT`       | `8888`                     | Service listening port                                    |
+| `DEBUG_STREAM`   | `false`                    | Set to `1`/`true` to tee SSE output to `debug/{sessionId}.md` |
+| `DEBUG_STREAM_DIR` | `debug/` (under project root) | DEBUG tee output directory                            |
 
+
+### Local markdown preview (without OpenWebUI)
+
+1. Set `DEBUG_STREAM=1` in `.env` (optional `DEBUG_STREAM_DIR`).
+2. Start the server and send a chat request (`curl` or any SSE client).
+3. The terminal prints `Debug markdown: .../{sessionId}.md`; open that file in your editor and preview markdown.
+
+Stress test scripts force `DEBUG_STREAM=0` and never write to `debug/`.
 
 ---
 

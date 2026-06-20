@@ -95,9 +95,17 @@ curl http://localhost:8888/v1/models
 | `MODEL_NAME`     | `deepseek-v4-flash`        | 使用的模型名称                        |
 | `MODEL_BASE_URL` | `https://api.deepseek.com` | API 地址                          |
 | `API_PORT`       | `8888`                     | 服务监听端口                         |
+| `DEBUG_STREAM`   | `false`                    | 为 `1`/`true` 时将 SSE 输出 tee 到 `debug/{sessionId}.md` |
+| `DEBUG_STREAM_DIR` | `debug/`（项目根下）       | DEBUG tee 输出目录                   |
 
 
----
+### 本地 Markdown 预览调试（不依赖 OpenWebUI）
+
+1. 在 `.env` 中设置 `DEBUG_STREAM=1`（可选 `DEBUG_STREAM_DIR`）。
+2. 启动服务并发送 chat 请求（`curl` 或任意 SSE 客户端）。
+3. 终端会打印 `Debug markdown: .../{sessionId}.md`；在编辑器中打开该文件并预览 markdown。
+
+压测脚本会强制 `DEBUG_STREAM=0`，不会写入 `debug/`。
 
 ## 🧩 Agent 定义
 

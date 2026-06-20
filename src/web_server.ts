@@ -18,6 +18,7 @@ const _sessions = new SessionStore();
 
 async function runWorkflowTurn(entry: SessionEntry, cmdOrInputs: unknown): Promise<void> {
   const sessionId = entry.session.sessionId;
+  await entry.ensureRunDir();
   const orchestrator = entry.getOrchestrator();
   try {
     await runUntilInterrupt(orchestrator, cmdOrInputs, sessionId);
@@ -270,7 +271,8 @@ if (require.main === module) {
 
   app
     .listen({ host: "0.0.0.0", port: CONFIG.apiPort })
-    .then(() => {
+    .then(async () => {
+      await fs.promises.mkdir(CONFIG.baseRunPath, { recursive: true });
       console.log(
         `✅ ${_manifest.displayName} 已启动，监听 0.0.0.0:${CONFIG.apiPort}`
       );

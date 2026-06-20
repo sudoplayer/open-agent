@@ -7,6 +7,12 @@ dotenv.config({ path: path.join(PROJECT_ROOT, ".env") });
 const API_PORT = Number(process.env.API_PORT ?? 8888);
 const PUBLIC_API_BASE_URL = `http://127.0.0.1:${API_PORT}`;
 
+function envFlag(name: string, defaultValue = false): boolean {
+  const v = process.env[name];
+  if (v === undefined) return defaultValue;
+  return v === "1" || v.toLowerCase() === "true";
+}
+
 export interface IConfig {
   readonly projectRoot: string;
   readonly agentsRoot: string;
@@ -20,6 +26,8 @@ export interface IConfig {
   readonly maxSessions: number;
   readonly apiPort: number;
   readonly publicApiBaseUrl: string;
+  readonly debugStream: boolean;
+  readonly debugStreamDir: string;
 }
 
 class Config implements IConfig {
@@ -35,6 +43,9 @@ class Config implements IConfig {
   readonly maxSessions = 1000;
   readonly apiPort = API_PORT;
   readonly publicApiBaseUrl = PUBLIC_API_BASE_URL;
+  readonly debugStream = envFlag("DEBUG_STREAM", false);
+  readonly debugStreamDir =
+    process.env.DEBUG_STREAM_DIR ?? path.join(PROJECT_ROOT, "debug");
 }
 
 export const CONFIG: IConfig = new Config();

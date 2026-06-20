@@ -29,12 +29,18 @@ type OrchestratorGraph = any;
 export class SessionEntry {
   session: WorkflowSession;
   private _orchestrator: OrchestratorGraph | null = null;
+  private _runDirEnsured = false;
 
   constructor(session: WorkflowSession) {
     this.session = session;
-    if (session.sessionRunPath) {
-      fs.mkdirSync(session.sessionRunPath, { recursive: true });
+  }
+
+  async ensureRunDir(): Promise<void> {
+    if (!this.session.sessionRunPath || this._runDirEnsured) {
+      return;
     }
+    await fs.promises.mkdir(this.session.sessionRunPath, { recursive: true });
+    this._runDirEnsured = true;
   }
 
   getOrchestrator(): OrchestratorGraph {

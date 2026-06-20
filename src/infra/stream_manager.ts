@@ -19,14 +19,38 @@ export class StreamManager {
   private activeCallbacks: Map<string, (chunk: string) => void> = new Map();
   private resumingSet: Set<string> = new Set();
   private sseStreams: Map<string, PassThrough> = new Map();
-
-  private appendDebugMarkdown(content: string): void {
-    const debugPath = path.join(CONFIG.projectRoot, "debug.md");
-    fs.appendFileSync(debugPath, content, "utf-8");
-  }
+  private debugWriteChains: Map<string, Promise<void>> = new Map();
+  private orphanWarned: Set<string> = new Set();
+  private debugDirEnsured = false;
 
   registerStreamCallback(threadId: string, callback: (chunk: string) => void): void {
     this.activeCallbacks.set(threadId, callback);
+  }
+
+  private debugMarkdownPath(threadId: string): string {
+    return path.join(CONFIG.debugStreamDir, `${threadId}.md`);
+  }
+
+  private ensureDebugDir(): Promise<void> {
+    if (this.debugDirEnsured) {
+      return Promise.resolve();
+    }
+    return fs.promises
+      .mkdir(CONFIG.debugStreamDir, { recursive: true })
+      .then(() => {
+        this.debugDirEnsured = true;
+      });
+  }
+
+  private teeDebugMarkdown(threadId: string, content: string): void {
+    const filePath = this.debugMarkdownPath(threadId);
+    const prior = this.debugWriteChains.get(threadId) ?? this.ensureDebugDir();
+    const chain = prior
+      .then(() => fs.promises.appendFile(filePath, content, "utf-8"))
+      .catch((e) => {
+        console.error(`Debug stream tee failed for ${threadId}:`, e);
+      });
+    this.debugWriteChains.set(threadId, chain);
   }
 
   beginStream(reply: any, threadId: string): void {
@@ -46,6 +70,10 @@ export class StreamManager {
     this.registerStreamCallback(threadId, (chunk: string) => {
       sseStream.write(chunk);
     });
+
+    if (CONFIG.debugStream) {
+      console.log(`Debug markdown: ${this.debugMarkdownPath(threadId)}`);
+    }
   }
 
   createStreamChunk(threadId: string, content: string, finishReason?: string): string {
@@ -71,8 +99,12 @@ export class StreamManager {
       if (callback !== undefined) {
         const chunk = this.createStreamChunk(threadId, content);
         callback(chunk);
-      } else {
-        this.appendDebugMarkdown(content);
+        if (CONFIG.debugStream) {
+          this.teeDebugMarkdown(threadId, content);
+        }
+      } else if (!this.orphanWarned.has(threadId)) {
+        this.orphanWarned.add(threadId);
+        console.warn(`streamOutput: no active callback for ${threadId}`);
       }
     } catch (e) {
       console.error("Stream output error:", e);
@@ -119,6 +151,8 @@ export class StreamManager {
     } finally {
       this.discardCallback(threadId);
       this.clearResuming(threadId);
+      this.debugWriteChains.delete(threadId);
+      this.orphanWarned.delete(threadId);
       const sseStream = this.sseStreams.get(threadId);
       if (sseStream) {
         sseStream.end();

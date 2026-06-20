@@ -18,8 +18,8 @@ dist/
 # Outputs
 runs/
 
-# Debug utils
-debug.md
+# Debug stream tee (DEBUG_STREAM=1)
+debug/
 
 # nginx
 nginx/nginx.conf

@@ -60,6 +60,7 @@ start_server() {
   LLM_API_KEY="mock-key" \
   MAX_SESSIONS="${MAX_SESSIONS}" \
   API_PORT="${API_PORT}" \
+  DEBUG_STREAM=0 \
     npx tsx "${REPO_ROOT}/src/web_server.ts" &
   SERVER_PID=$!
   wait_for_url "${BASE_URL}/health" 30
