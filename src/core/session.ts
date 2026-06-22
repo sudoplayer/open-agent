@@ -5,7 +5,7 @@ import * as path from "path";
 import { CONFIG } from "config";
 import { buildOrchestratorFromManifest } from "core/agent_factory";
 import { loadManifest } from "core/manifest_loader";
-import { releaseSessionCheckpoint } from "infra/workflow_checkpointer";
+import { markSessionEvicted } from "infra/workflow_checkpointer";
 import { streamManager } from "infra/stream_manager";
 
 
@@ -17,10 +17,11 @@ export function buildSessionId(userId: string, chatId: string): string {
 export interface WorkflowSession {
   sessionId: string;
   sessionRunPath: string;
+  userId: string;
 }
 
 export function createWorkflowSession(): WorkflowSession {
-  return { sessionId: "", sessionRunPath: "" };
+  return { sessionId: "", sessionRunPath: "", userId: "" };
 }
 
 
@@ -49,7 +50,8 @@ export class SessionEntry {
       this._orchestrator = buildOrchestratorFromManifest(
         manifest,
         this.session.sessionId,
-        this.session.sessionRunPath
+        this.session.sessionRunPath,
+        this.session.userId
       );
     }
     return this._orchestrator;
@@ -85,12 +87,12 @@ export class SessionStore {
     const oldestId = this._insertOrder.shift();
     if (oldestId) {
       this._store.delete(oldestId);
-      releaseSessionCheckpoint(oldestId);
+      markSessionEvicted(oldestId);
       streamManager.endStream(oldestId);
     }
   }
 
-  getOrCreate(sessionId: string): SessionEntry {
+  getOrCreate(sessionId: string, userId: string): SessionEntry {
     const existing = this._store.get(sessionId);
     if (existing) {
       this.touch(sessionId);
@@ -100,6 +102,7 @@ export class SessionStore {
     const session = createWorkflowSession();
     session.sessionId = sessionId;
     session.sessionRunPath = path.join(CONFIG.baseRunPath, sessionId);
+    session.userId = userId;
 
     const entry = new SessionEntry(session);
     this._store.set(sessionId, entry);
@@ -112,5 +115,3 @@ export class SessionStore {
     return entry;
   }
 }
-
-

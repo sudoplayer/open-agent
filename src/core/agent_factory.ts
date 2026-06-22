@@ -3,13 +3,47 @@ import type { SubAgent } from "deepagents";
 import { ChatOpenAI } from "@langchain/openai";
 import type { StructuredTool } from "@langchain/core/tools";
 import { CONFIG } from "../config";
-import { WORKFLOW_CHECKPOINTER } from "../infra/workflow_checkpointer";
+import {
+  agentKeyFromSkillPath,
+  resolveAgentMemoryPath,
+} from "../infra/agent_memory";
+import { getWorkflowCheckpointer } from "../infra/workflow_checkpointer";
 import { AgentManifest } from "./manifest_loader";
 import * as path from "path";
 import { makeAskUserQuestionTool } from "./tools/ask_user_question";
 import { makeRequestFilePathTool } from "./tools/request_file_path";
+import { MEMORY_PROTOCOL_PROMPT, makeSaveMemoryTool } from "./tools/save_memory";
 import { makeStreamImageTool } from "./tools/stream_image";
 
+const ORCHESTRATOR_AGENT_KEY = "orchestrator";
+
+function hasSaveMemory(tools: string[]): boolean {
+  return tools.includes("platform.save_memory");
+}
+
+export function buildSystemPrompt(
+  basePrompt: string,
+  sessionRunPath: string,
+  userId: string,
+  agentKey: string,
+  tools: string[]
+): string {
+  const parts = [basePrompt, ""];
+  const contextLines = [
+    `userId: ${userId}`,
+    `sessionRunPath: ${sessionRunPath}`,
+  ];
+  if (hasSaveMemory(tools)) {
+    contextLines.push(
+      `agentMemoryPath: ${resolveAgentMemoryPath(userId, agentKey)}`
+    );
+  }
+  parts.push(contextLines.join("\n"));
+  if (hasSaveMemory(tools)) {
+    parts.push("", MEMORY_PROTOCOL_PROMPT);
+  }
+  return parts.join("\n");
+}
 
 function buildLlm(): ChatOpenAI {
   const modelKwargs: Record<string, unknown> =
@@ -24,12 +58,17 @@ function buildLlm(): ChatOpenAI {
   });
 }
 
-
-type ToolFactory = (sessionId: string, sessionRunPath: string, ...args: unknown[]) => StructuredTool;
+type ToolFactory = (
+  sessionId: string,
+  sessionRunPath: string,
+  userId: string,
+  agentKey?: string
+) => StructuredTool;
 
 const PLATFORM_TOOL_FACTORIES: Record<string, ToolFactory> = {
   ask_user_question: makeAskUserQuestionTool as ToolFactory,
   request_file_path: makeRequestFilePathTool as ToolFactory,
+  save_memory: makeSaveMemoryTool as ToolFactory,
   stream_image: makeStreamImageTool as ToolFactory,
 };
 
@@ -64,17 +103,36 @@ function resolveToolFactory(toolRef: string): ToolFactory {
 function instantiateTool(
   ref: string,
   sessionId: string,
-  sessionRunPath: string
+  sessionRunPath: string,
+  userId: string,
+  agentKey?: string
 ): StructuredTool {
-  const factory = resolveToolFactory(ref);
-  return factory(sessionId, sessionRunPath);
-}
+  if (ref.startsWith("platform.")) {
+    const factory = resolveToolFactory(ref);
+    if (ref === "platform.save_memory") {
+      if (!agentKey) {
+        throw new Error("save_memory requires agentKey");
+      }
+      return factory(sessionId, sessionRunPath, userId, agentKey);
+    }
+    return (factory as (s: string, r: string) => StructuredTool)(
+      sessionId,
+      sessionRunPath
+    );
+  }
 
+  const factory = resolveToolFactory(ref);
+  return (factory as (s: string, r: string) => StructuredTool)(
+    sessionId,
+    sessionRunPath
+  );
+}
 
 export function buildOrchestratorFromManifest(
   manifest: AgentManifest,
   sessionId: string,
-  sessionRunPath: string
+  sessionRunPath: string,
+  userId: string
 ) {
   const llm = buildLlm();
   const backend = new LocalShellBackend({
@@ -84,16 +142,33 @@ export function buildOrchestratorFromManifest(
   });
 
   const orchTools = manifest.orchestrator.tools.map((t) =>
-    instantiateTool(t, sessionId, sessionRunPath)
+    instantiateTool(
+      t,
+      sessionId,
+      sessionRunPath,
+      userId,
+      ORCHESTRATOR_AGENT_KEY
+    )
   );
 
-  const subagentDicts: SubAgent[] = manifest.subagents.map((subagent) => ({
-    name: subagent.name,
-    description: subagent.description,
-    systemPrompt: `${subagent.systemPrompt}\n\nsessionRunPath: ${sessionRunPath}`,
-    tools: subagent.tools.map((t) => instantiateTool(t, sessionId, sessionRunPath)),
-    skills: subagent.skills,
-  }));
+  const subagentDicts: SubAgent[] = manifest.subagents.map((subagent) => {
+    const agentKey = agentKeyFromSkillPath(subagent.skills[0]);
+    return {
+      name: subagent.name,
+      description: subagent.description,
+      systemPrompt: buildSystemPrompt(
+        subagent.systemPrompt,
+        sessionRunPath,
+        userId,
+        agentKey,
+        subagent.tools
+      ),
+      tools: subagent.tools.map((t) =>
+        instantiateTool(t, sessionId, sessionRunPath, userId, agentKey)
+      ),
+      skills: subagent.skills,
+    };
+  });
 
   const orchestrator = createDeepAgent({
     model: llm,
@@ -101,8 +176,14 @@ export function buildOrchestratorFromManifest(
     skills: manifest.orchestrator.skills,
     subagents: subagentDicts,
     tools: orchTools,
-    systemPrompt: manifest.orchestrator.systemPrompt,
-    checkpointer: WORKFLOW_CHECKPOINTER,
+    systemPrompt: buildSystemPrompt(
+      manifest.orchestrator.systemPrompt,
+      sessionRunPath,
+      userId,
+      ORCHESTRATOR_AGENT_KEY,
+      manifest.orchestrator.tools
+    ),
+    checkpointer: getWorkflowCheckpointer(),
   });
 
   return orchestrator;

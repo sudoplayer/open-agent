@@ -12,11 +12,12 @@ __pycache__/
 .vscode/
 .claude/
 
-# Build output
-dist/
-
 # Outputs
 runs/
+
+# Memory
+data/
+memory/
 
 # Debug stream tee (DEBUG_STREAM=1)
 debug/

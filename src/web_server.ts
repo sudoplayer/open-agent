@@ -9,7 +9,12 @@ import { CONFIG } from "config";
 import { SessionEntry, SessionStore, buildSessionId } from "core/session";
 import { loadManifest } from "core/manifest_loader";
 import { streamManager } from "infra/stream_manager";
-import { runUntilInterrupt, hasPendingInterrupt, makeConfig } from "agents/runner";
+import { runUntilInterrupt, hasPendingInterrupt, isWorkflowDone, makeConfig } from "agents/runner";
+import {
+  initWorkflowCheckpointer,
+  markSessionCompleted,
+  startCheckpointVacuumScheduler,
+} from "infra/workflow_checkpointer";
 import { Command } from "@langchain/langgraph";
 
 const _manifest = loadManifest();
@@ -22,6 +27,9 @@ async function runWorkflowTurn(entry: SessionEntry, cmdOrInputs: unknown): Promi
   const orchestrator = entry.getOrchestrator();
   try {
     await runUntilInterrupt(orchestrator, cmdOrInputs, sessionId);
+    if (await isWorkflowDone(orchestrator, sessionId)) {
+      markSessionCompleted(sessionId);
+    }
   } catch (e) {
     console.error(`Workflow turn failed for session ${sessionId}:`, e);
     streamManager.streamOutput(`\n\n❌ Workflow failed: ${String(e)}\n\n`, sessionId);
@@ -222,7 +230,7 @@ app.post<{ Body: ChatCompletionRequest }>("/v1/chat/completions", async (request
   }
 
   const sessionId = buildSessionId(body.user_id, body.chat_id);
-  const entry = _sessions.getOrCreate(sessionId);
+  const entry = _sessions.getOrCreate(sessionId, body.user_id);
   const orchestrator = entry.getOrchestrator();
 
   const userMessages = body.messages.filter((m) => m.role === "user");
@@ -269,18 +277,20 @@ if (require.main === module) {
 
   console.log(`🚀 ${_manifest.displayName} 将在 ${CONFIG.publicApiBaseUrl} 启动`);
 
-  app
-    .listen({ host: "0.0.0.0", port: CONFIG.apiPort })
-    .then(async () => {
+  void (async () => {
+    try {
+      await initWorkflowCheckpointer();
+      startCheckpointVacuumScheduler();
       await fs.promises.mkdir(CONFIG.baseRunPath, { recursive: true });
+      await app.listen({ host: "0.0.0.0", port: CONFIG.apiPort });
       console.log(
         `✅ ${_manifest.displayName} 已启动，监听 0.0.0.0:${CONFIG.apiPort}`
       );
-    })
-    .catch((err) => {
+    } catch (err) {
       console.error("Server start failed:", err);
       process.exit(1);
-    });
+    }
+  })();
 }
 
 export { app };

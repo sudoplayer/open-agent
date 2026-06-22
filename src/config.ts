@@ -28,6 +28,11 @@ export interface IConfig {
   readonly publicApiBaseUrl: string;
   readonly debugStream: boolean;
   readonly debugStreamDir: string;
+  readonly checkpointDbPath: string;
+  readonly checkpointRetentionDays: number;
+  readonly checkpointVacuumIntervalMs: number;
+  readonly memoryRoot: string;
+  readonly memoryMaxChars: number;
 }
 
 class Config implements IConfig {
@@ -46,6 +51,15 @@ class Config implements IConfig {
   readonly debugStream = envFlag("DEBUG_STREAM", false);
   readonly debugStreamDir =
     process.env.DEBUG_STREAM_DIR ?? path.join(PROJECT_ROOT, "debug");
+  readonly checkpointDbPath =
+    process.env.CHECKPOINT_DB_PATH ?? "data/checkpoints.sqlite";
+  readonly checkpointRetentionDays = Number(
+    process.env.CHECKPOINT_RETENTION_DAYS ?? 7
+  );
+  readonly checkpointVacuumIntervalMs =
+    Number(process.env.CHECKPOINT_VACUUM_INTERVAL_HOURS ?? 6) * 60 * 60 * 1000;
+  readonly memoryRoot = "memory";
+  readonly memoryMaxChars = 500;
 }
 
 export const CONFIG: IConfig = new Config();

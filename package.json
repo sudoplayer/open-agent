@@ -13,6 +13,7 @@
   "dependencies": {
     "deepagents": "latest",
     "@langchain/langgraph": "latest",
+    "@langchain/langgraph-checkpoint-sqlite": "^1.0.3",
     "@langchain/openai": "latest",
     "langchain": "latest",
     "fastify": "^5.0.0",
