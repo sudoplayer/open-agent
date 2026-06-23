@@ -6,7 +6,8 @@
   const ASSISTANT_SELECTOR = ".chat-assistant";
   const USER_SELECTOR = ".chat-user";
   const BLOCK_SELECTOR = ".language-request-file-path";
-  const CODE_CONTAINER_SELECTOR = ".relative.my-2";
+  // CodeBlock wrapper: "relative flex flex-col" in OW 0.6.x (my-2) and 0.9.x (my-0.5)
+  const CODE_BLOCK_CONTAINER_SELECTOR = "div.relative.flex.flex-col";
 
   window.__REQUEST_FILE_PATH_JS_VERSION = "1.0.0";
   window.__scanRequestFilePath = function () {
@@ -83,7 +84,7 @@
   }
 
   function findCodeBlockContainer(block) {
-    return block.closest(CODE_CONTAINER_SELECTOR);
+    return block.closest(CODE_BLOCK_CONTAINER_SELECTOR);
   }
 
   function hideCodeBlock(block) {

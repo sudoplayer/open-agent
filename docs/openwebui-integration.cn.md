@@ -43,7 +43,7 @@ nginx 作为统一入口，负责：
 conda create -n openwebui python=3.11 -y
 conda activate openwebui
 pip install uv
-uv pip install open-webui==0.6.18
+uv pip install open-webui==0.9.6
 ```
 
 ### 2. 安装 nginx（conda）
@@ -62,13 +62,15 @@ mkdir -p ~/.nginx/{logs,tmp/{client,proxy,fastcgi,uwsgi,scgi}}
 
 ### 3. 配置 nginx
 
-编辑 `nginx/nginx.conf`，将其中硬编码的路径替换为实际路径：
+`nginx/nginx.conf` 由 `nginx/nginx.conf.template` 在运行时生成。**无需手改路径**，执行：
 
-- `error_log` / `pid` / `client_body_temp_path` 等 → 指向 `~/.nginx/`
-- `include .../mime.types` → 指向 conda 环境中 nginx 的 mime.types 路径
-- `alias .../frontend/ask_question.js` 等 → 指向本 repo 的 `frontend/` 目录
+```bash
+./start_frontend.sh
+```
 
-端口默认配置（可按需修改）：
+脚本会替换 `REPO_DIR`、`CONDA_BASE`、`NGINX_RUNTIME_DIR`，校验配置并启动或重载 nginx。若 3066 端口已在监听，会自动 reload，使前端 JS 路径与本仓库保持同步。
+
+端口默认配置（可在 `start_frontend.sh` / `nginx/nginx.conf.template` 中修改）：
 
 | 组件 | 端口 |
 |------|------|
@@ -78,7 +80,11 @@ mkdir -p ~/.nginx/{logs,tmp/{client,proxy,fastcgi,uwsgi,scgi}}
 
 ### 4. 安装 OpenWebUI Filter 插件
 
-将 `src/openwebui/forward_metadata_filter.py` 复制到 OpenWebUI 的 filter 函数库，使其在请求中将 metadata 中的 `user_id` / `chat_id` 注入请求体。
+1. 在 Open WebUI 中进入 **Admin → Functions**。
+2. 新建 **Filter**，粘贴 `src/openwebui/forward_metadata_filter.py` 的内容。
+3. 保存并按提示全局启用。
+
+Filter 的 `inlet` 会将请求 `metadata` 中的 `user_id`、`chat_id` 写入请求体顶层，供本平台后端跨轮次保持会话。
 
 ### 5. 启动服务
 
@@ -86,13 +92,8 @@ mkdir -p ~/.nginx/{logs,tmp/{client,proxy,fastcgi,uwsgi,scgi}}
 # 1. 启动本平台后端
 npm start
 
-# 2. 启动 OpenWebUI
-conda activate openwebui
-DATA_DIR=~/.open-webui HF_HUB_OFFLINE=1 open-webui serve --host 0.0.0.0 --port 3088
-
-# 3. 启动 nginx
-conda activate nginx
-nginx -c /path/to/open-agent/nginx/nginx.conf
+# 2. 启动 OpenWebUI + nginx
+./start_frontend.sh
 ```
 
 ---
@@ -100,13 +101,14 @@ nginx -c /path/to/open-agent/nginx/nginx.conf
 ## 配置 OpenWebUI
 
 1. 浏览器打开 `http://YOUR_SERVER_IP:3066`
-2. 进入 OpenWebUI 管理后台 → Settings → Connections
+2. 进入 **Admin Panel → Settings → Connections**
 3. 在 **OpenAI API** 连接中，将 API 地址设为：
    ```
    http://YOUR_SERVER_IP:8888/v1
    ```
    API Key 可任意填写（本平台不校验上游 Key）。
-4. 在 Functions 中启用 "Forward Metadata" filter，确保会话上下文正确传递。
+4. 将 **Forward Metadata** filter 挂到实际使用的模型上
+若模型未启用该 filter，后端会因缺少 `user_id` / `chat_id` 而拒绝请求。
 
 ---
 
@@ -123,7 +125,10 @@ window.__ASK_QUESTION_JS_VERSION
 window.__REQUEST_FILE_PATH_JS_VERSION
 # 应输出 "1.0.0"
 
-# 3. 发起对话，触发 HITL 流程，选项卡片应正常渲染
+# 3. 发起对话，触发 HITL 流程 — 选项卡片与文件选择器应正常渲染；
+#    点击选项后应自动提交用户消息。
+
+# 4. 在 Network 中查看 POST .../v1/chat/completions，请求体应含 user_id、chat_id。
 ```
 
 ---
@@ -131,7 +136,6 @@ window.__REQUEST_FILE_PATH_JS_VERSION
 ## 日常运维
 
 ```bash
-# 修改 nginx 配置后重载
-conda activate nginx
-nginx -s reload -c /path/to/open-agent/nginx/nginx.conf
+# 修改前端 JS 或 nginx 模板后，通过脚本重载：
+./start_frontend.sh
 ```

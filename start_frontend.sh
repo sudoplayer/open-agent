@@ -9,11 +9,17 @@ CONDA_BASE="$(conda info --base 2>/dev/null || echo "$HOME/miniconda3")"
 NGINX_RUNTIME_DIR="$HOME/.nginx"
 NGINX_TEMPLATE="$REPO_DIR/nginx/nginx.conf.template"
 NGINX_CONF="$REPO_DIR/nginx/nginx.conf"
+NGINX_BIN="$CONDA_BASE/envs/nginx/sbin/nginx"
+NGINX_PREFIX="$CONDA_BASE/envs/nginx"
 
 render_nginx_conf() {
     export REPO_DIR CONDA_BASE NGINX_RUNTIME_DIR
     envsubst '${REPO_DIR} ${CONDA_BASE} ${NGINX_RUNTIME_DIR}' \
         < "$NGINX_TEMPLATE" > "$NGINX_CONF"
+}
+
+nginx_cmd() {
+    "$NGINX_BIN" -p "$NGINX_PREFIX" "$@"
 }
 
 # ── Ensure nginx runtime directories ────────────────────
@@ -28,20 +34,23 @@ else
     # Source conda and activate the openwebui env
     source "$CONDA_BASE/etc/profile.d/conda.sh"
     conda activate openwebui
-    DATA_DIR=~/.open-webui HF_HUB_OFFLINE=1 open-webui serve --host 0.0.0.0 --port "$OPENWEBUI_PORT" &
+    DATA_DIR=~/.open-webui-latest HF_HUB_OFFLINE=1 open-webui serve --host 0.0.0.0 --port "$OPENWEBUI_PORT" &
     echo "    OpenWebUI started (PID $!)."
 fi
 
-# ── Start nginx ─────────────────────────────────────────
-echo "==> Checking nginx on port $NGINX_PORT ..."
+# ── Start / reload nginx ────────────────────────────────
+echo "==> Configuring nginx on port $NGINX_PORT ..."
+source "$CONDA_BASE/etc/profile.d/conda.sh"
+conda activate nginx
+render_nginx_conf
+nginx_cmd -t -c "$NGINX_CONF"
+
 if ss -tlnp 2>/dev/null | grep -q ":$NGINX_PORT " || netstat -tlnp 2>/dev/null | grep -q ":$NGINX_PORT "; then
-    echo "    nginx already running."
+    echo "    Reloading nginx (paths refreshed from this repo) ..."
+    nginx_cmd -s reload -c "$NGINX_CONF"
 else
     echo "    Starting nginx ..."
-    source "$CONDA_BASE/etc/profile.d/conda.sh"
-    conda activate nginx
-    render_nginx_conf
-    nginx -c "$NGINX_CONF"
+    nginx_cmd -c "$NGINX_CONF"
     echo "    nginx started."
 fi
 

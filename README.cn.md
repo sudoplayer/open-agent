@@ -219,7 +219,7 @@ curl http://localhost:8888/v1/models
 
 本平台与 OpenWebUI 深度集成，提供 **HITL 交互卡片**、**文件路径选择器**、**动态图片渲染**、**会话管理**等能力。通过 nginx 将 OpenWebUI 页面和本平台后端统一代理，并注入前端 JS 将 HITL 代码块渲染为可交互组件。
 
-> 📖 完整部署步骤（conda 环境、nginx 配置、filter 插件安装）见 **[docs/openwebui-integration.md](docs/openwebui-integration.md)**
+> 📖 完整部署步骤（conda 环境、nginx 配置、filter 插件安装）见 **[docs/openwebui-integration.cn.md](docs/openwebui-integration.cn.md)**
 
 ---
 

@@ -39,7 +39,7 @@ nginx serves as the unified entry point, responsible for:
 conda create -n openwebui python=3.11 -y
 conda activate openwebui
 pip install uv
-uv pip install open-webui==0.6.18
+uv pip install open-webui==0.9.6
 ```
 
 ### 2. Install nginx (conda)
@@ -58,13 +58,15 @@ mkdir -p ~/.nginx/{logs,tmp/{client,proxy,fastcgi,uwsgi,scgi}}
 
 ### 3. Configure nginx
 
-Edit `nginx/nginx.conf`, replacing hardcoded paths with your actual paths:
+`nginx/nginx.conf` is generated from `nginx/nginx.conf.template` at runtime. **Do not edit paths by hand** — run:
 
-- `error_log` / `pid` / `client_body_temp_path`, etc. → point to `~/.nginx/`
-- `include .../mime.types` → point to the mime.types path in your conda nginx environment
-- `alias .../frontend/ask_question.js`, etc. → point to this repo's `frontend/` directory
+```bash
+./start_frontend.sh
+```
 
-Default port configuration (modifiable as needed):
+The script substitutes `REPO_DIR`, `CONDA_BASE`, and `NGINX_RUNTIME_DIR`, validates the config, and starts or reloads nginx. If nginx is already listening on port 3066, it reloads so frontend JS paths stay in sync with this repo.
+
+Default port configuration (modifiable in `start_frontend.sh` / `nginx/nginx.conf.template`):
 
 
 | Component          | Port   |
@@ -76,7 +78,11 @@ Default port configuration (modifiable as needed):
 
 ### 4. Install OpenWebUI Filter Plugin
 
-Copy `src/openwebui/forward_metadata_filter.py` to OpenWebUI's filter function library, so it injects `user_id` / `chat_id` from metadata into the request body.
+1. In Open WebUI, go to **Admin → Functions**.
+2. Create a new **Filter** and paste the contents of `src/openwebui/forward_metadata_filter.py`.
+3. Save and enable the filter globally if prompted.
+
+The filter's `inlet` hook copies `user_id` and `chat_id` from request `metadata` into the top-level request body so the platform backend can maintain session context across turns.
 
 ### 5. Start Services
 
@@ -84,13 +90,8 @@ Copy `src/openwebui/forward_metadata_filter.py` to OpenWebUI's filter function l
 # 1. Start the platform backend
 npm start
 
-# 2. Start OpenWebUI
-conda activate openwebui
-DATA_DIR=~/.open-webui HF_HUB_OFFLINE=1 open-webui serve --host 0.0.0.0 --port 3088
-
-# 3. Start nginx
-conda activate nginx
-nginx -c /path/to/open-agent/nginx/nginx.conf
+# 2. Start OpenWebUI + nginx
+./start_frontend.sh
 ```
 
 ---
@@ -98,13 +99,14 @@ nginx -c /path/to/open-agent/nginx/nginx.conf
 ## Configure OpenWebUI
 
 1. Open your browser at `http://YOUR_SERVER_IP:3066`
-2. Go to OpenWebUI Admin Panel → Settings → Connections
+2. Go to **Admin Panel → Settings → Connections**
 3. In the **OpenAI API** connection, set the API URL to:
-  ```
+   ```
    http://YOUR_SERVER_IP:8888/v1
-  ```
+   ```
    The API Key can be anything (the platform does not validate upstream keys).
-4. Enable the "Forward Metadata" filter in Functions to ensure correct session context passing.
+4. Attach the **Forward Metadata** filter to the model you use for this platform
+Without the filter enabled on the model, the backend will reject requests missing `user_id` / `chat_id`.
 
 ---
 
@@ -121,7 +123,10 @@ window.__ASK_QUESTION_JS_VERSION
 window.__REQUEST_FILE_PATH_JS_VERSION
 # Should output "1.0.0"
 
-# 3. Start a conversation, trigger the HITL flow, and the option cards should render correctly
+# 3. Start a conversation, trigger the HITL flow — option cards and the file picker should render;
+#    clicking a choice should submit a user message automatically.
+
+# 4. In Network tab, inspect POST to .../v1/chat/completions — body should include user_id and chat_id.
 ```
 
 ---
@@ -129,8 +134,6 @@ window.__REQUEST_FILE_PATH_JS_VERSION
 ## Daily Operations
 
 ```bash
-# Reload nginx after configuration changes
-conda activate nginx
-nginx -s reload -c /path/to/open-agent/nginx/nginx.conf
+# After changing frontend JS or nginx template, reload nginx via the helper script:
+./start_frontend.sh
 ```
-
