@@ -67,7 +67,7 @@ mkdir -p ~/.nginx/{logs,tmp/{client,proxy,fastcgi,uwsgi,scgi}}
 
 #### Windows (standalone)
 
-The Windows startup script uses a **standalone nginx install** (not the conda package). Download the Windows build from [nginx.org](https://nginx.org/en/download.html) and extract it, e.g. to `D:\Software\nginx`.
+The Windows startup script uses a **standalone nginx install**. Download the Windows build from [nginx.org](https://nginx.org/en/download.html) and extract it, e.g. to `D:\Software\nginx`.
 
 Before first run, edit the path variables at the top of `start_frontend.ps1`:
 
