@@ -35,14 +35,23 @@ nginx serves as the unified entry point, responsible for:
 
 ### 1. Install OpenWebUI (conda)
 
+Install OpenWebUI via conda on both Linux and Windows. The conda environment name is `open-webui` on all platforms:
+
 ```bash
-conda create -n openwebui python=3.11 -y
-conda activate openwebui
+conda create -n open-webui python=3.11 -y
+conda activate open-webui
 pip install uv
 uv pip install open-webui==0.9.6
 ```
 
-### 2. Install nginx (conda)
+| Platform | Startup script |
+| -------- | -------------- |
+| Linux | `start_frontend.sh` |
+| Windows | `start_frontend.bat` / `start_frontend.ps1` |
+
+### 2. Install nginx
+
+#### Linux (conda)
 
 ```bash
 conda create -n nginx python=3.11 -y
@@ -56,17 +65,38 @@ Create the required nginx runtime directories:
 mkdir -p ~/.nginx/{logs,tmp/{client,proxy,fastcgi,uwsgi,scgi}}
 ```
 
+#### Windows (standalone)
+
+The Windows startup script uses a **standalone nginx install** (not the conda package). Download the Windows build from [nginx.org](https://nginx.org/en/download.html) and extract it, e.g. to `D:\Software\nginx`.
+
+Before first run, edit the path variables at the top of `start_frontend.ps1`:
+
+| Variable | Description |
+| -------- | ----------- |
+| `$CONDA_BASE` | Miniconda / Anaconda install dir (e.g. `D:\miniconda3`) |
+| `$NGINX_HOME` | nginx extract dir (must contain `nginx.exe` and `conf\mime.types`) |
+
+The script creates runtime dirs under `%USERPROFILE%\.nginx` automatically.
+
 ### 3. Configure nginx
 
-`nginx/nginx.conf` is generated from `nginx/nginx.conf.template` at runtime. **Do not edit paths by hand** — run:
+`nginx/nginx.conf` is generated from `nginx/nginx.conf.template` at runtime. **Do not edit paths in nginx.conf by hand** — run the platform startup script. It substitutes `REPO_DIR`, `NGINX_RUNTIME_DIR`, and `NGINX_MIME_TYPES`, validates the config, and starts or reloads nginx. If port 3066 is already in use, it reloads so frontend JS paths stay in sync with this repo.
+
+**Linux:**
 
 ```bash
 ./start_frontend.sh
 ```
 
-The script substitutes `REPO_DIR`, `CONDA_BASE`, and `NGINX_RUNTIME_DIR`, validates the config, and starts or reloads nginx. If nginx is already listening on port 3066, it reloads so frontend JS paths stay in sync with this repo.
+**Windows:**
 
-Default port configuration (modifiable in `start_frontend.sh` / `nginx/nginx.conf.template`):
+```powershell
+.\start_frontend.bat
+# or
+.\start_frontend.ps1
+```
+
+Default port configuration (modifiable in `start_frontend.sh` / `start_frontend.ps1` / `nginx/nginx.conf.template`):
 
 
 | Component          | Port   |
@@ -86,12 +116,24 @@ The filter's `inlet` hook copies `user_id` and `chat_id` from request `metadata`
 
 ### 5. Start Services
 
+**Linux:**
+
 ```bash
 # 1. Start the platform backend
 npm start
 
 # 2. Start OpenWebUI + nginx
 ./start_frontend.sh
+```
+
+**Windows:**
+
+```powershell
+# 1. Start the platform backend
+npm start
+
+# 2. Start OpenWebUI + nginx
+.\start_frontend.bat
 ```
 
 ---
@@ -133,7 +175,14 @@ window.__REQUEST_FILE_PATH_JS_VERSION
 
 ## Daily Operations
 
+After changing JS under `frontend/` or `nginx/nginx.conf.template`, re-run the startup script to reload nginx (auto-reloads if port 3066 is already listening):
+
 ```bash
-# After changing frontend JS or nginx template, reload nginx via the helper script:
+# Linux
 ./start_frontend.sh
+```
+
+```powershell
+# Windows
+.\start_frontend.bat
 ```

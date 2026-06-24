@@ -13,8 +13,9 @@ NGINX_BIN="$CONDA_BASE/envs/nginx/sbin/nginx"
 NGINX_PREFIX="$CONDA_BASE/envs/nginx"
 
 render_nginx_conf() {
-    export REPO_DIR CONDA_BASE NGINX_RUNTIME_DIR
-    envsubst '${REPO_DIR} ${CONDA_BASE} ${NGINX_RUNTIME_DIR}' \
+    export REPO_DIR NGINX_RUNTIME_DIR
+    export NGINX_MIME_TYPES="$CONDA_BASE/envs/nginx/etc/nginx/mime.types"
+    envsubst '${REPO_DIR} ${NGINX_RUNTIME_DIR} ${NGINX_MIME_TYPES}' \
         < "$NGINX_TEMPLATE" > "$NGINX_CONF"
 }
 
@@ -31,9 +32,9 @@ if ss -tlnp 2>/dev/null | grep -q ":$OPENWEBUI_PORT " || netstat -tlnp 2>/dev/nu
     echo "    OpenWebUI already running."
 else
     echo "    Starting OpenWebUI ..."
-    # Source conda and activate the openwebui env
+    # Source conda and activate the open-webui env
     source "$CONDA_BASE/etc/profile.d/conda.sh"
-    conda activate openwebui
+    conda activate open-webui
     DATA_DIR=~/.open-webui-latest HF_HUB_OFFLINE=1 open-webui serve --host 0.0.0.0 --port "$OPENWEBUI_PORT" &
     echo "    OpenWebUI started (PID $!)."
 fi

@@ -1,7 +1,7 @@
 # nginx configuration for conda deployment (generated from template)
 # Usage:
 #   ./start_frontend.sh
-# Variables substituted at runtime: REPO_DIR, CONDA_BASE, NGINX_RUNTIME_DIR
+# Variables substituted at runtime: REPO_DIR, NGINX_RUNTIME_DIR, NGINX_MIME_TYPES
 
 worker_processes  auto;
 error_log   ${NGINX_RUNTIME_DIR}/logs/error.log warn;
@@ -12,7 +12,7 @@ events {
 }
 
 http {
-    include       ${CONDA_BASE}/envs/nginx/etc/nginx/mime.types;
+    include       ${NGINX_MIME_TYPES};
     default_type  application/octet-stream;
 
     sendfile        on;
