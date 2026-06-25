@@ -8,7 +8,7 @@ export function agentKeyFromSkillPath(skillPath: string): string {
   return path.basename(skillPath);
 }
 
-export function resolveAgentMemoryPath(
+export function resolveUserMemoryPath(
   userId: string,
   agentKey: string
 ): string {
@@ -25,7 +25,7 @@ export function ensureAgentMemoryDir(
   userId: string,
   agentKey: string
 ): string {
-  const dir = path.dirname(resolveAgentMemoryPath(userId, agentKey));
+  const dir = path.dirname(resolveUserMemoryPath(userId, agentKey));
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }

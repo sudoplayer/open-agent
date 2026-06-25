@@ -7,7 +7,7 @@ This platform deeply integrates with OpenWebUI, providing the following capabili
 - **HITL Interactive Cards** — Renders `ask-user-question` code blocks as clickable option buttons
 - **File Path Picker** — Renders `request-file-path` code blocks as a file system browser component
 - **Dynamic Image Rendering** — Supports MJPEG live streams and embedded static PNG display
-- **Session Management** — Forwards OpenWebUI's `user_id` / `chat_id` to the backend via `forward_metadata_filter.py`, enabling cross-turn context preservation
+- **Session Management** — OpenWebUI forwards `user_id` / `chat_id` via HTTP headers (`x-openwebui-user-id`, `x-openwebui-chat-id`) when `ENABLE_FORWARD_USER_INFO_HEADERS=true`, enabling cross-turn context preservation
 
 ---
 
@@ -106,13 +106,13 @@ Default port configuration (modifiable in `start_frontend.sh` / `start_frontend.
 | Platform backend   | `8888` |
 
 
-### 4. Install OpenWebUI Filter Plugin
+### 4. Enable Session Identity Headers
 
-1. In Open WebUI, go to **Admin → Functions**.
-2. Create a new **Filter** and paste the contents of `src/openwebui/forward_metadata_filter.py`.
-3. Save and enable the filter globally if prompted.
+OpenWebUI can forward session identity to the backend via HTTP headers. The startup scripts (`start_frontend.sh` / `start_frontend.ps1`) set `ENABLE_FORWARD_USER_INFO_HEADERS=true` automatically when starting OpenWebUI.
 
-The filter's `inlet` hook copies `user_id` and `chat_id` from request `metadata` into the top-level request body so the platform backend can maintain session context across turns.
+If OpenWebUI is already running without this variable, restart it with the env var set, or re-run the startup script after stopping the existing process.
+
+The backend reads `x-openwebui-user-id` and `x-openwebui-chat-id` from incoming request headers to maintain session context across turns.
 
 ### 5. Start Services
 
@@ -147,8 +147,8 @@ npm start
    http://YOUR_SERVER_IP:8888/v1
    ```
    The API Key can be anything (the platform does not validate upstream keys).
-4. Attach the **Forward Metadata** filter to the model you use for this platform
-Without the filter enabled on the model, the backend will reject requests missing `user_id` / `chat_id`.
+
+Without `ENABLE_FORWARD_USER_INFO_HEADERS=true` on OpenWebUI, the backend will reject requests missing the `x-openwebui-user-id` / `x-openwebui-chat-id` headers.
 
 ---
 
@@ -168,7 +168,7 @@ window.__REQUEST_FILE_PATH_JS_VERSION
 # 3. Start a conversation, trigger the HITL flow — option cards and the file picker should render;
 #    clicking a choice should submit a user message automatically.
 
-# 4. In Network tab, inspect POST to .../v1/chat/completions — body should include user_id and chat_id.
+# 4. In Network tab, inspect POST to .../v1/chat/completions — request headers should include x-openwebui-user-id and x-openwebui-chat-id.
 ```
 
 ---

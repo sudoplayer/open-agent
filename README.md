@@ -189,8 +189,7 @@ Response:
 │   ├── config.ts       # Configuration management
 │   ├── agents/         # Agent runtime (runner, SSE formatting)
 │   ├── core/           # Core framework (Agent factory, manifest loading, session management, HITL tools)
-│   ├── infra/          # Infrastructure (SSE stream management, LangGraph checkpoints)
-│   └── openwebui/      # OpenWebUI integration (metadata forwarding filter)
+│   └── infra/          # Infrastructure (SSE stream management, LangGraph checkpoints)
 │
 ├── agents/          # Agent definition (manifest + skills + tools)
 │
@@ -217,7 +216,7 @@ Response:
 
 This platform deeply integrates with OpenWebUI, providing **HITL interactive cards**, **file path picker**, **dynamic image rendering**, **session management**, and more. Through nginx, it proxies both the OpenWebUI frontend and the platform backend under a unified endpoint, injecting frontend JS to render HITL code blocks as interactive components.
 
-> 📖 For complete deployment steps (conda environment, nginx configuration, filter plugin installation), see **[docs/openwebui-integration.md](docs/openwebui-integration.md)**
+> 📖 For complete deployment steps (conda environment, nginx configuration, session identity headers), see **[docs/openwebui-integration.md](docs/openwebui-integration.md)**
 
 ---
 

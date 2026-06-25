@@ -11,7 +11,7 @@
 - **HITL 交互卡片** — 将 `ask-user-question` 代码块渲染为可点击的选项按钮
 - **文件路径选择器** — 将 `request-file-path` 代码块渲染为文件系统浏览组件
 - **动态图片渲染** — 支持 MJPEG 实时流和静态 PNG 内嵌展示
-- **会话管理** — 通过 `forward_metadata_filter.py` 将 OpenWebUI 的 `user_id` / `chat_id` 转发到后端，实现跨轮次上下文保持
+- **会话管理** — OpenWebUI 在 `ENABLE_FORWARD_USER_INFO_HEADERS=true` 时通过 HTTP 头（`x-openwebui-user-id`、`x-openwebui-chat-id`）将 `user_id` / `chat_id` 转发到后端，实现跨轮次上下文保持
 
 ---
 
@@ -108,13 +108,13 @@ Windows 启动脚本使用**独立安装的 nginx**。从 [nginx.org](https://ng
 | OpenWebUI 上游 | `3088` |
 | 本平台后端 | `8888` |
 
-### 4. 安装 OpenWebUI Filter 插件
+### 4. 启用会话身份 HTTP 头
 
-1. 在 Open WebUI 中进入 **Admin → Functions**。
-2. 新建 **Filter**，粘贴 `src/openwebui/forward_metadata_filter.py` 的内容。
-3. 保存并按提示全局启用。
+OpenWebUI 可通过 HTTP 头将会话身份转发到后端。启动脚本（`start_frontend.sh` / `start_frontend.ps1`）在启动 OpenWebUI 时会自动设置 `ENABLE_FORWARD_USER_INFO_HEADERS=true`。
 
-Filter 的 `inlet` 会将请求 `metadata` 中的 `user_id`、`chat_id` 写入请求体顶层，供本平台后端跨轮次保持会话。
+若 OpenWebUI 已在未设置该变量的情况下运行，需先停止现有进程，再带上该环境变量重启，或重新运行启动脚本。
+
+后端从请求头 `x-openwebui-user-id`、`x-openwebui-chat-id` 读取会话身份，用于跨轮次保持上下文。
 
 ### 5. 启动服务
 
@@ -149,8 +149,8 @@ npm start
    http://YOUR_SERVER_IP:8888/v1
    ```
    API Key 可任意填写（本平台不校验上游 Key）。
-4. 将 **Forward Metadata** filter 挂到实际使用的模型上
-若模型未启用该 filter，后端会因缺少 `user_id` / `chat_id` 而拒绝请求。
+
+若 OpenWebUI 未设置 `ENABLE_FORWARD_USER_INFO_HEADERS=true`，后端会因缺少 `x-openwebui-user-id` / `x-openwebui-chat-id` 请求头而拒绝请求。
 
 ---
 
@@ -170,7 +170,7 @@ window.__REQUEST_FILE_PATH_JS_VERSION
 # 3. 发起对话，触发 HITL 流程 — 选项卡片与文件选择器应正常渲染；
 #    点击选项后应自动提交用户消息。
 
-# 4. 在 Network 中查看 POST .../v1/chat/completions，请求体应含 user_id、chat_id。
+# 4. 在 Network 中查看 POST .../v1/chat/completions，请求头应含 x-openwebui-user-id、x-openwebui-chat-id。
 ```
 
 ---

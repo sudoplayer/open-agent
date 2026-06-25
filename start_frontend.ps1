@@ -94,6 +94,7 @@ if (Test-PortListening $OPENWEBUI_PORT) {
     Write-Host '    OpenWebUI already running.'
 } else {
     Write-Host '    Starting OpenWebUI ...'
+    $env:ENABLE_FORWARD_USER_INFO_HEADERS = 'true'
     $env:DATA_DIR = Join-Path $env:USERPROFILE '.open-webui-latest'
     $env:HF_HUB_OFFLINE = '1'
 

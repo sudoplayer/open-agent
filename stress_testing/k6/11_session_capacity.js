@@ -4,7 +4,7 @@ import { Trend, Rate, Counter } from "k6/metrics";
 import {
   chatUrl,
   capacityChatPayload,
-  jsonHeaders,
+  capacityChatHeaders,
   hasSseDone,
   CHAT_TIMEOUT,
 } from "./lib/sse.js";
@@ -34,7 +34,7 @@ export default function () {
   const start = Date.now();
 
   const res = http.post(chatUrl(), payload, {
-    headers: jsonHeaders(),
+    headers: capacityChatHeaders(__VU),
     timeout: CHAT_TIMEOUT,
     tags: { name: "chat_completions_capacity" },
   });

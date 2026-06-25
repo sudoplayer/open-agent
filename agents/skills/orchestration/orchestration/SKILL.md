@@ -7,11 +7,12 @@ description: 编排 AI 计算器主流程：解析表达式、确认运算计划
 
 ## Memory
 
-开始执行任务前：
+开始执行任务前，**必须先**检查并加载 memory（禁止跳过此步骤）：
 
-1. 查看 system prompt 中的 `agentMemoryPath`。
-2. 若该文件存在，用 `read_file` 读取（`limit=1000`），将其中经验教训纳入本次决策。
-3. 若不存在，跳过，按本 skill 正常流程执行。
+1. 查看 system prompt 中的 `userMemoryPath`。
+2. **必须先** `ls` 或 `read_file` 检查该路径，存在则读取（`limit=1000`），将其中经验教训纳入本次决策。
+3. 检查完成后，**在回复中明确说明**是否加载了 memory（例如「已加载个人 memory」或「无个人 memory，未加载 memory」）。
+4. 若不存在，跳过，按本 skill 正常流程执行。
 
 ## 执行顺序（严格遵守）
 

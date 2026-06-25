@@ -1,6 +1,4 @@
 {
   "model": "AI计算器",
-  "user_id": "load-user-PLACEHOLDER",
-  "chat_id": "load-chat-PLACEHOLDER",
   "messages": [{ "role": "user", "content": "1+1" }]
 }

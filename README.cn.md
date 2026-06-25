@@ -191,8 +191,7 @@ curl http://localhost:8888/v1/models
 │   ├── config.ts       # 配置管理
 │   ├── agents/         # 智能体运行（runner、SSE 格式化）
 │   ├── core/           # 核心框架（Agent 工厂、清单加载、会话管理、HITL 工具）
-│   ├── infra/          # 基础设施（SSE 流管理、LangGraph 检查点）
-│   └── openwebui/      # OpenWebUI 集成（元数据转发 filter）
+│   └── infra/          # 基础设施（SSE 流管理、LangGraph 检查点）
 │
 ├── agents/          # Agent 定义（manifest + skills + tools）
 │
@@ -219,7 +218,7 @@ curl http://localhost:8888/v1/models
 
 本平台与 OpenWebUI 深度集成，提供 **HITL 交互卡片**、**文件路径选择器**、**动态图片渲染**、**会话管理**等能力。通过 nginx 将 OpenWebUI 页面和本平台后端统一代理，并注入前端 JS 将 HITL 代码块渲染为可交互组件。
 
-> 📖 完整部署步骤（conda 环境、nginx 配置、filter 插件安装）见 **[docs/openwebui-integration.cn.md](docs/openwebui-integration.cn.md)**
+> 📖 完整部署步骤（conda 环境、nginx 配置、会话身份 HTTP 头）见 **[docs/openwebui-integration.cn.md](docs/openwebui-integration.cn.md)**
 
 ---
 

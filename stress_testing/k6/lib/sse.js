@@ -24,8 +24,6 @@ export function modelsUrl(baseUrl = DEFAULT_BASE_URL) {
 export function demoChatPayload(vu, iter, prefix = "load") {
   return JSON.stringify({
     model: DEMO_MODEL,
-    user_id: `${prefix}-user-${vu}`,
-    chat_id: `${prefix}-chat-${vu}-${iter}-${Date.now()}`,
     messages: [{ role: "user", content: "1+1" }],
   });
 }
@@ -36,10 +34,30 @@ export function demoChatPayload(vu, iter, prefix = "load") {
 export function capacityChatPayload(index, prefix = "load") {
   return JSON.stringify({
     model: DEMO_MODEL,
-    user_id: `${prefix}-cap-user`,
-    chat_id: `${prefix}-cap-chat-${String(index).padStart(6, "0")}`,
     messages: [{ role: "user", content: "1+1" }],
   });
+}
+
+export function sessionIdentityHeaders(userId, chatId) {
+  return {
+    "Content-Type": "application/json",
+    "x-openwebui-user-id": userId,
+    "x-openwebui-chat-id": chatId,
+  };
+}
+
+export function demoChatHeaders(vu, iter, prefix = "load") {
+  return sessionIdentityHeaders(
+    `${prefix}-user-${vu}`,
+    `${prefix}-chat-${vu}-${iter}-${Date.now()}`,
+  );
+}
+
+export function capacityChatHeaders(index, prefix = "load") {
+  return sessionIdentityHeaders(
+    `${prefix}-cap-user`,
+    `${prefix}-cap-chat-${String(index).padStart(6, "0")}`,
+  );
 }
 
 export function jsonHeaders() {

@@ -3,7 +3,7 @@ import * as fs from "fs";
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import { CONFIG } from "config";
-import { ensureAgentMemoryDir, resolveAgentMemoryPath } from "infra/agent_memory";
+import { ensureAgentMemoryDir, resolveUserMemoryPath } from "infra/agent_memory";
 
 export const MEMORY_PROTOCOL_PROMPT = `
 ## 长期记忆写入协议
@@ -16,7 +16,7 @@ export const MEMORY_PROTOCOL_PROMPT = `
    - 用户以自由文本提出修改意见 → 按意见修订正文后，**须再次**调用 \`ask_user_question\` 展示修订内容并请用户确认；未获确认前不得调用 \`save_memory\`
    - 用户明确拒绝 → **不得**调用 \`save_memory\`
 
-2. **再**调用 \`save_memory({ memory })\`：纯落盘工具，不含确认逻辑；仅在第 1 步获用户确认后调用，且仅写入本 agent 的 \`agentMemoryPath\`。
+2. **再**调用 \`save_memory({ memory })\`：纯落盘工具，不含确认逻辑；仅在第 1 步获用户确认后调用，且仅写入本 agent 的 \`userMemoryPath\`。
 
 禁止用 \`write_file\` / \`edit_file\` 写入 \`memory/\` 目录；禁止跳过 \`ask_user_question\` 直接调用 \`save_memory\`。
 `.trim();
@@ -43,7 +43,7 @@ export function appendMemory(
   }
 
   ensureAgentMemoryDir(userId, agentKey);
-  const filePath = resolveAgentMemoryPath(userId, agentKey);
+  const filePath = resolveUserMemoryPath(userId, agentKey);
   const date = new Date().toISOString().slice(0, 10);
   const line = `- [${date}] ${memory.trim()}\n`;
   fs.appendFileSync(filePath, line, "utf-8");
@@ -64,7 +64,7 @@ export function makeSaveMemoryTool(
     {
       name: "save_memory",
       description:
-        "将经验教训写入本 agent 的长期记忆文件（agentMemoryPath）。" +
+        "将经验教训写入本 agent 的长期记忆文件（userMemoryPath）。" +
         " 仅写结论性经验教训（每条建议 < 200 字）。" +
         " **必须先经 ask_user_question 展示正文并获用户确认**；若用户提出修改，修订后须再次确认。" +
         " 禁止跳过用户确认直接写入；用户拒绝则不得调用本工具。",

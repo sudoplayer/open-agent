@@ -5,7 +5,7 @@ import type { StructuredTool } from "@langchain/core/tools";
 import { CONFIG } from "../config";
 import {
   agentKeyFromSkillPath,
-  resolveAgentMemoryPath,
+  resolveUserMemoryPath,
 } from "../infra/agent_memory";
 import { getWorkflowCheckpointer } from "../infra/workflow_checkpointer";
 import { AgentManifest } from "./manifest_loader";
@@ -14,8 +14,6 @@ import { makeAskUserQuestionTool } from "./tools/ask_user_question";
 import { makeRequestFilePathTool } from "./tools/request_file_path";
 import { MEMORY_PROTOCOL_PROMPT, makeSaveMemoryTool } from "./tools/save_memory";
 import { makeStreamImageTool } from "./tools/stream_image";
-
-const ORCHESTRATOR_AGENT_KEY = "orchestrator";
 
 function hasSaveMemory(tools: string[]): boolean {
   return tools.includes("platform.save_memory");
@@ -35,7 +33,7 @@ export function buildSystemPrompt(
   ];
   if (hasSaveMemory(tools)) {
     contextLines.push(
-      `agentMemoryPath: ${resolveAgentMemoryPath(userId, agentKey)}`
+      `userMemoryPath: ${resolveUserMemoryPath(userId, agentKey)}`
     );
   }
   parts.push(contextLines.join("\n"));
@@ -141,13 +139,17 @@ export function buildOrchestratorFromManifest(
     inheritEnv: true,
   });
 
+  const orchestratorAgentKey = agentKeyFromSkillPath(
+    manifest.orchestrator.skills[0]
+  );
+
   const orchTools = manifest.orchestrator.tools.map((t) =>
     instantiateTool(
       t,
       sessionId,
       sessionRunPath,
       userId,
-      ORCHESTRATOR_AGENT_KEY
+      orchestratorAgentKey
     )
   );
 
@@ -180,7 +182,7 @@ export function buildOrchestratorFromManifest(
       manifest.orchestrator.systemPrompt,
       sessionRunPath,
       userId,
-      ORCHESTRATOR_AGENT_KEY,
+      orchestratorAgentKey,
       manifest.orchestrator.tools
     ),
     checkpointer: getWorkflowCheckpointer(),

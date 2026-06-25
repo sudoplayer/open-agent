@@ -216,21 +216,35 @@ app.get<{ Querystring: { path?: string; dirs_only?: string } }>("/v1/fs/list", a
 interface ChatCompletionRequest {
   model?: string;
   messages: Array<{ role: string; content: string }>;
-  user_id?: string;
-  chat_id?: string;
+}
+
+function pickHeader(v: string | string[] | undefined): string | undefined {
+  return Array.isArray(v) ? v[0] : v;
+}
+
+function resolveSessionIdentity(
+  headers: Record<string, string | string[] | undefined>,
+): { userId?: string; chatId?: string } {
+  return {
+    userId: pickHeader(headers["x-openwebui-user-id"]),
+    chatId: pickHeader(headers["x-openwebui-chat-id"]),
+  };
 }
 
 app.post<{ Body: ChatCompletionRequest }>("/v1/chat/completions", async (request, reply) => {
   const body = request.body;
+  const { userId, chatId } = resolveSessionIdentity(request.headers);
 
-  if (!body.user_id || !body.chat_id) {
+  if (!userId || !chatId) {
     return reply.code(400).send({
-      detail: "Missing session identity: both user_id and chat_id are required.",
+      detail:
+        "Missing session identity: x-openwebui-user-id and x-openwebui-chat-id headers are required " +
+        "(set ENABLE_FORWARD_USER_INFO_HEADERS=true on OpenWebUI).",
     });
   }
 
-  const sessionId = buildSessionId(body.user_id, body.chat_id);
-  const entry = _sessions.getOrCreate(sessionId, body.user_id);
+  const sessionId = buildSessionId(userId, chatId);
+  const entry = _sessions.getOrCreate(sessionId, userId);
   const orchestrator = entry.getOrchestrator();
 
   const userMessages = body.messages.filter((m) => m.role === "user");

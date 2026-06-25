@@ -35,7 +35,7 @@ else
     # Source conda and activate the open-webui env
     source "$CONDA_BASE/etc/profile.d/conda.sh"
     conda activate open-webui
-    DATA_DIR=~/.open-webui-latest HF_HUB_OFFLINE=1 open-webui serve --host 0.0.0.0 --port "$OPENWEBUI_PORT" &
+    ENABLE_FORWARD_USER_INFO_HEADERS=true DATA_DIR=~/.open-webui-latest HF_HUB_OFFLINE=1 open-webui serve --host 0.0.0.0 --port "$OPENWEBUI_PORT" &
     echo "    OpenWebUI started (PID $!)."
 fi
 
