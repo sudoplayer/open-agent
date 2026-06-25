@@ -4,14 +4,12 @@ import { ChatOpenAI } from "@langchain/openai";
 import type { StructuredTool } from "@langchain/core/tools";
 import { CONFIG } from "../config";
 import {
-  agentKeyFromSkillPath,
+  agentIdFromSkillPath,
   resolveUserMemoryPath,
 } from "../infra/agent_memory";
 import { getWorkflowCheckpointer } from "../infra/workflow_checkpointer";
 import { AgentManifest } from "./manifest_loader";
-import * as path from "path";
 import { makeAskUserQuestionTool } from "./tools/ask_user_question";
-import { makeRequestFilePathTool } from "./tools/request_file_path";
 import { MEMORY_PROTOCOL_PROMPT, makeSaveMemoryTool } from "./tools/save_memory";
 import { makeStreamImageTool } from "./tools/stream_image";
 
@@ -23,7 +21,7 @@ export function buildSystemPrompt(
   basePrompt: string,
   sessionRunPath: string,
   userId: string,
-  agentKey: string,
+  agentId: string,
   tools: string[]
 ): string {
   const parts = [basePrompt, ""];
@@ -33,7 +31,7 @@ export function buildSystemPrompt(
   ];
   if (hasSaveMemory(tools)) {
     contextLines.push(
-      `userMemoryPath: ${resolveUserMemoryPath(userId, agentKey)}`
+      `userMemoryPath: ${resolveUserMemoryPath(userId, agentId)}`
     );
   }
   parts.push(contextLines.join("\n"));
@@ -56,74 +54,37 @@ function buildLlm(): ChatOpenAI {
   });
 }
 
-type ToolFactory = (
-  sessionId: string,
-  sessionRunPath: string,
-  userId: string,
-  agentKey?: string
-) => StructuredTool;
-
-const PLATFORM_TOOL_FACTORIES: Record<string, ToolFactory> = {
-  ask_user_question: makeAskUserQuestionTool as ToolFactory,
-  request_file_path: makeRequestFilePathTool as ToolFactory,
-  save_memory: makeSaveMemoryTool as ToolFactory,
-  stream_image: makeStreamImageTool as ToolFactory,
+const PLATFORM_TOOL_FACTORIES: Record<string, (...args: any[]) => StructuredTool> = {
+  ask_user_question: makeAskUserQuestionTool,
+  save_memory: makeSaveMemoryTool,
+  stream_image: makeStreamImageTool,
 };
-
-function resolveToolFactory(toolRef: string): ToolFactory {
-  // Platform tools: "platform.<toolName>"
-  if (toolRef.startsWith("platform.")) {
-    const toolName = toolRef.slice("platform.".length);
-    const factory = PLATFORM_TOOL_FACTORIES[toolName];
-    if (!factory) {
-      const available = Object.keys(PLATFORM_TOOL_FACTORIES).join(", ") || "(none)";
-      throw new Error(`Unknown platform tool: "${toolName}". Available: ${available}`);
-    }
-    return factory;
-  }
-
-  // Agent tools: bare name, loaded from agents/tools/index.ts
-  const modPath = path.join(CONFIG.agentsRoot, "tools", "index");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const mod = require(modPath);
-  const factories: Record<string, ToolFactory> = mod.toolFactories ?? {};
-  const factory = factories[toolRef];
-  if (!factory) {
-    const available = Object.keys(factories).join(", ") || "(none)";
-    throw new Error(
-      `Unknown agent tool: "${toolRef}". ` +
-      `Available: ${available}`
-    );
-  }
-  return factory;
-}
 
 function instantiateTool(
   ref: string,
   sessionId: string,
   sessionRunPath: string,
   userId: string,
-  agentKey?: string
+  agentId?: string
 ): StructuredTool {
-  if (ref.startsWith("platform.")) {
-    const factory = resolveToolFactory(ref);
-    if (ref === "platform.save_memory") {
-      if (!agentKey) {
-        throw new Error("save_memory requires agentKey");
-      }
-      return factory(sessionId, sessionRunPath, userId, agentKey);
-    }
-    return (factory as (s: string, r: string) => StructuredTool)(
-      sessionId,
-      sessionRunPath
-    );
+  if (!ref.startsWith("platform.")) {
+    throw new Error(`Unknown tool: "${ref}". Only platform tools are supported.`);
   }
 
-  const factory = resolveToolFactory(ref);
-  return (factory as (s: string, r: string) => StructuredTool)(
-    sessionId,
-    sessionRunPath
-  );
+  const toolName = ref.slice("platform.".length);
+  const factory = PLATFORM_TOOL_FACTORIES[toolName];
+  if (!factory) {
+    const available = Object.keys(PLATFORM_TOOL_FACTORIES).join(", ") || "(none)";
+    throw new Error(`Unknown platform tool: "${toolName}". Available: ${available}`);
+  }
+
+  if (toolName === "save_memory") {
+    if (!agentId) {
+      throw new Error("save_memory requires agentId");
+    }
+    return makeSaveMemoryTool(sessionId, sessionRunPath, userId, agentId);
+  }
+  return factory(sessionId, sessionRunPath);
 }
 
 export function buildOrchestratorFromManifest(
@@ -139,7 +100,7 @@ export function buildOrchestratorFromManifest(
     inheritEnv: true,
   });
 
-  const orchestratorAgentKey = agentKeyFromSkillPath(
+  const orchestratoragentId = agentIdFromSkillPath(
     manifest.orchestrator.skills[0]
   );
 
@@ -149,12 +110,12 @@ export function buildOrchestratorFromManifest(
       sessionId,
       sessionRunPath,
       userId,
-      orchestratorAgentKey
+      orchestratoragentId
     )
   );
 
   const subagentDicts: SubAgent[] = manifest.subagents.map((subagent) => {
-    const agentKey = agentKeyFromSkillPath(subagent.skills[0]);
+    const agentId = agentIdFromSkillPath(subagent.skills[0]);
     return {
       name: subagent.name,
       description: subagent.description,
@@ -162,11 +123,11 @@ export function buildOrchestratorFromManifest(
         subagent.systemPrompt,
         sessionRunPath,
         userId,
-        agentKey,
+        agentId,
         subagent.tools
       ),
       tools: subagent.tools.map((t) =>
-        instantiateTool(t, sessionId, sessionRunPath, userId, agentKey)
+        instantiateTool(t, sessionId, sessionRunPath, userId, agentId)
       ),
       skills: subagent.skills,
     };
@@ -182,7 +143,7 @@ export function buildOrchestratorFromManifest(
       manifest.orchestrator.systemPrompt,
       sessionRunPath,
       userId,
-      orchestratorAgentKey,
+      orchestratoragentId,
       manifest.orchestrator.tools
     ),
     checkpointer: getWorkflowCheckpointer(),

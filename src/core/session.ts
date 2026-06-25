@@ -20,10 +20,6 @@ export interface WorkflowSession {
   userId: string;
 }
 
-export function createWorkflowSession(): WorkflowSession {
-  return { sessionId: "", sessionRunPath: "", userId: "" };
-}
-
 
 type OrchestratorGraph = any;
 
@@ -99,10 +95,11 @@ export class SessionStore {
       return existing;
     }
 
-    const session = createWorkflowSession();
-    session.sessionId = sessionId;
-    session.sessionRunPath = path.join(CONFIG.baseRunPath, sessionId);
-    session.userId = userId;
+    const session: WorkflowSession = {
+      sessionId,
+      sessionRunPath: path.join(CONFIG.baseRunPath, sessionId),
+      userId,
+    };
 
     const entry = new SessionEntry(session);
     this._store.set(sessionId, entry);

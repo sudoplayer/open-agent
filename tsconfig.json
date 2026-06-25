@@ -16,10 +16,8 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "ignoreDeprecations": "6.0",
-    "outDir": "./dist",
     "rootDir": "."
   },
-  "include": ["src/**/*", "agents/**/*.ts", "tests/**/*.ts"],
+  "include": ["src/**/*", "agents/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

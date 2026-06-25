@@ -16,7 +16,6 @@ orchestrator:
     - orchestration
   tools:
     - platform.ask_user_question
-    - platform.request_file_path
     - platform.stream_image
     - platform.save_memory
 

@@ -9,7 +9,7 @@ import { CONFIG } from "config";
 import { SessionEntry, SessionStore, buildSessionId } from "core/session";
 import { loadManifest } from "core/manifest_loader";
 import { streamManager } from "infra/stream_manager";
-import { runUntilInterrupt, hasPendingInterrupt, isWorkflowDone, makeConfig } from "agents/runner";
+import { runUntilInterrupt, hasPendingInterrupt, isWorkflowDone } from "agents/runner";
 import {
   initWorkflowCheckpointer,
   markSessionCompleted,
@@ -193,26 +193,6 @@ app.get<{ Params: { sessionId: string; "*": string } }>(
   }
 );
 
-app.get<{ Querystring: { path?: string; dirs_only?: string } }>("/v1/fs/list", async (request, reply) => {
-  const q = request.query as { path?: string; dirs_only?: string };
-  const reqPath = q.path ?? os.homedir();
-  const dirsOnly = q.dirs_only === "true";
-  const resolved = path.resolve(reqPath);
-  if (!resolved.startsWith(os.homedir())) {
-    return reply.code(403).send({ detail: "Path not allowed" });
-  }
-  try {
-    const entries = fs
-      .readdirSync(resolved, { withFileTypes: true })
-      .filter((e) => !e.name.startsWith(".") && (!dirsOnly || e.isDirectory()))
-      .map((e) => ({ name: e.name, type: e.isDirectory() ? "dir" : "file" }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-    return { current_path: resolved, entries };
-  } catch {
-    return reply.code(404).send({ detail: "Path not found or not accessible" });
-  }
-});
-
 interface ChatCompletionRequest {
   model?: string;
   messages: Array<{ role: string; content: string }>;
@@ -251,8 +231,6 @@ app.post<{ Body: ChatCompletionRequest }>("/v1/chat/completions", async (request
   const latestUserMessage = userMessages[userMessages.length - 1]?.content ?? "";
 
   streamManager.beginStream(reply, sessionId);
-  // streamManager.streamOutput(`\n\n🔑 session_id: ${sessionId}\n\n`, sessionId);
-
   const isResume = await hasPendingInterrupt(orchestrator, sessionId);
   if (isResume) streamManager.setResuming(sessionId, true);
 
@@ -261,7 +239,7 @@ app.post<{ Body: ChatCompletionRequest }>("/v1/chat/completions", async (request
       if (isResume) {
         await runWorkflowTurn(entry, new Command({ resume: latestUserMessage }));
       } else {
-        const snapshot = await orchestrator.getState(makeConfig(sessionId));
+        const snapshot = await orchestrator.getState({ configurable: { thread_id: sessionId } });
         if (snapshot.values && Object.keys(snapshot.values as object).length > 0) {
           streamManager.streamOutput("\n\n❌ Please start a new conversation.\n\n", sessionId);
         } else {
@@ -284,8 +262,6 @@ app.post<{ Body: ChatCompletionRequest }>("/v1/chat/completions", async (request
     }
   })();
 });
-
-
 if (require.main === module) {
   dotenv.config({ path: path.join(__dirname, "..", ".env") });
 

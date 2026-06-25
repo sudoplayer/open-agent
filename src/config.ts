@@ -13,29 +13,7 @@ function envFlag(name: string, defaultValue = false): boolean {
   return v === "1" || v.toLowerCase() === "true";
 }
 
-export interface IConfig {
-  readonly projectRoot: string;
-  readonly agentsRoot: string;
-  readonly baseRunPath: string;
-  readonly modelBaseUrl: string;
-  readonly modelName: string;
-  readonly llmApiKey?: string;
-  readonly temperature: number;
-  readonly thinkingEnabled: boolean;
-  readonly recursionLimit: number;
-  readonly maxSessions: number;
-  readonly apiPort: number;
-  readonly publicApiBaseUrl: string;
-  readonly debugStream: boolean;
-  readonly debugStreamDir: string;
-  readonly checkpointDbPath: string;
-  readonly checkpointRetentionDays: number;
-  readonly checkpointVacuumIntervalMs: number;
-  readonly memoryRoot: string;
-  readonly memoryMaxChars: number;
-}
-
-class Config implements IConfig {
+export class Config {
   readonly projectRoot = PROJECT_ROOT;
   readonly agentsRoot = path.join(PROJECT_ROOT, "agents");
   readonly baseRunPath = path.join(PROJECT_ROOT, "runs");
@@ -62,4 +40,4 @@ class Config implements IConfig {
   readonly memoryMaxChars = 500;
 }
 
-export const CONFIG: IConfig = new Config();
+export const CONFIG = new Config();

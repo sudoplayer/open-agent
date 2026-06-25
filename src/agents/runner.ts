@@ -2,20 +2,12 @@ import type { StreamEvent } from "@langchain/core/dist/tracers/event_stream";
 import { CONFIG } from "config";
 import { handleAgentStreamEvent } from "./agent_stream_utils";
 
-export function makeConfig(sessionId: string): Record<string, unknown> {
-  return {
-    configurable: { thread_id: sessionId },
-  };
-}
-
-type AnyOrchestrator = any;
-
 export async function runUntilInterrupt(
-  orchestrator: AnyOrchestrator,
+  orchestrator: any,
   cmdOrInputs: unknown,
   sessionId: string
 ): Promise<void> {
-  const config = makeConfig(sessionId);
+  const config = { configurable: { thread_id: sessionId } };
   for await (const event of orchestrator.streamEvents(cmdOrInputs, {
     ...config,
     version: "v2",
@@ -26,10 +18,10 @@ export async function runUntilInterrupt(
 }
 
 export async function hasPendingInterrupt(
-  orchestrator: AnyOrchestrator,
+  orchestrator: any,
   sessionId: string
 ): Promise<boolean> {
-  const config = makeConfig(sessionId);
+  const config = { configurable: { thread_id: sessionId } };
   const snapshot = await orchestrator.getState(config);
   const tasks: Array<{ interrupts: unknown[] }> = snapshot?.tasks ?? [];
   return tasks.some(
@@ -38,10 +30,10 @@ export async function hasPendingInterrupt(
 }
 
 export async function isWorkflowDone(
-  orchestrator: AnyOrchestrator,
+  orchestrator: any,
   sessionId: string
 ): Promise<boolean> {
-  const config = makeConfig(sessionId);
+  const config = { configurable: { thread_id: sessionId } };
   const snapshot = await orchestrator.getState(config);
   const next: string[] = snapshot?.next ?? [];
   return next.length === 0;

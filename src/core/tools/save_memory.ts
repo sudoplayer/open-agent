@@ -34,7 +34,7 @@ export function validateMemoryContent(memory: string): string | null {
 
 export function appendMemory(
   userId: string,
-  agentKey: string,
+  agentId: string,
   memory: string
 ): string {
   const error = validateMemoryContent(memory);
@@ -42,8 +42,8 @@ export function appendMemory(
     throw new Error(error);
   }
 
-  ensureAgentMemoryDir(userId, agentKey);
-  const filePath = resolveUserMemoryPath(userId, agentKey);
+  ensureAgentMemoryDir(userId, agentId);
+  const filePath = resolveUserMemoryPath(userId, agentId);
   const date = new Date().toISOString().slice(0, 10);
   const line = `- [${date}] ${memory.trim()}\n`;
   fs.appendFileSync(filePath, line, "utf-8");
@@ -54,11 +54,11 @@ export function makeSaveMemoryTool(
   _sessionId: string,
   _sessionRunPath: string,
   userId: string,
-  agentKey: string
+  agentId: string
 ) {
   return tool(
     async ({ memory }: { memory: string }): Promise<string> => {
-      const filePath = appendMemory(userId, agentKey, memory);
+      const filePath = appendMemory(userId, agentId, memory);
       return `记忆已保存: ${filePath}`;
     },
     {

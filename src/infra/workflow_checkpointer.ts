@@ -14,17 +14,17 @@ interface EvictionRecord {
 
 type EvictionStore = Record<string, EvictionRecord>;
 
-function resolveCheckpointDbPath(override?: string): string {
-  const raw = override ?? activeCheckpointDbPath ?? CONFIG.checkpointDbPath;
+function resolveCheckpointDbPath(): string {
+  const raw = activeCheckpointDbPath ?? CONFIG.checkpointDbPath;
   return path.isAbsolute(raw) ? raw : path.join(CONFIG.projectRoot, raw);
 }
 
-function evictionsFilePath(checkpointDbPath?: string): string {
-  return path.join(path.dirname(resolveCheckpointDbPath(checkpointDbPath)), "evictions.json");
+function evictionsFilePath(): string {
+  return path.join(path.dirname(resolveCheckpointDbPath()), "evictions.json");
 }
 
-function loadEvictions(checkpointDbPath?: string): EvictionStore {
-  const filePath = evictionsFilePath(checkpointDbPath);
+function loadEvictions(): EvictionStore {
+  const filePath = evictionsFilePath();
   if (!fs.existsSync(filePath)) return {};
   try {
     return JSON.parse(fs.readFileSync(filePath, "utf-8")) as EvictionStore;
@@ -34,14 +34,14 @@ function loadEvictions(checkpointDbPath?: string): EvictionStore {
   }
 }
 
-function saveEvictions(store: EvictionStore, checkpointDbPath?: string): void {
-  const filePath = evictionsFilePath(checkpointDbPath);
+function saveEvictions(store: EvictionStore): void {
+  const filePath = evictionsFilePath();
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, JSON.stringify(store, null, 2));
 }
 
-export async function initWorkflowCheckpointer(dbPathOverride?: string): Promise<void> {
-  const dbPath = resolveCheckpointDbPath(dbPathOverride);
+export async function initWorkflowCheckpointer(): Promise<void> {
+  const dbPath = resolveCheckpointDbPath();
   activeCheckpointDbPath = dbPath;
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   checkpointer = SqliteSaver.fromConnString(dbPath);
@@ -72,13 +72,11 @@ export function markSessionCompleted(sessionId: string): void {
   saveEvictions(store);
 }
 
-export async function runCheckpointVacuum(
-  options?: { now?: number; checkpointDbPath?: string }
-): Promise<string[]> {
+export async function runCheckpointVacuum(): Promise<string[]> {
   const cp = getWorkflowCheckpointer();
-  const now = options?.now ?? Date.now();
+  const now = Date.now();
   const retentionMs = CONFIG.checkpointRetentionDays * 24 * 60 * 60 * 1000;
-  const store = loadEvictions(options?.checkpointDbPath);
+  const store = loadEvictions();
   const deleted: string[] = [];
 
   for (const [sessionId, record] of Object.entries(store)) {
@@ -96,7 +94,7 @@ export async function runCheckpointVacuum(
   }
 
   if (deleted.length > 0) {
-    saveEvictions(store, options?.checkpointDbPath);
+    saveEvictions(store);
   }
 
   return deleted;
