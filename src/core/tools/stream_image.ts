@@ -5,7 +5,11 @@ import { z } from "zod";
 import { CONFIG } from "config";
 import { streamManager } from "infra/stream_manager";
 
-export function makeStreamImageTool(sessionId: string, sessionRunPath: string) {
+export function makeStreamImageTool(
+  sessionId: string,
+  sessionRunPath: string,
+  userId: string,
+) {
   return tool(
     async ({
       filename,
@@ -21,7 +25,8 @@ export function makeStreamImageTool(sessionId: string, sessionRunPath: string) {
       }
 
       const encoded = filename.split("/").map(encodeURIComponent).join("/");
-      const liveUrl = `${CONFIG.publicApiBaseUrl}/v1/sessions/${sessionId}/live/${encoded}`;
+      const liveUrl =
+        `${CONFIG.publicApiBaseUrl}/v1/sessions/${encodeURIComponent(userId)}/${sessionId}/live/${encoded}`;
       streamManager.streamOutput(`\n\n![](${liveUrl})\n\n`, sessionId);
       return streaming
         ? `实时图像展示已嵌入对话: ${filename}`

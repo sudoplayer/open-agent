@@ -41,7 +41,7 @@ export function capacityChatPayload(index, prefix = "load") {
 export function sessionIdentityHeaders(userId, chatId) {
   return {
     "Content-Type": "application/json",
-    "x-openwebui-user-id": userId,
+    "x-openwebui-user-name": userId,
     "x-openwebui-chat-id": chatId,
   };
 }

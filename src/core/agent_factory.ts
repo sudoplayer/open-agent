@@ -84,6 +84,9 @@ function instantiateTool(
     }
     return makeSaveMemoryTool(sessionId, sessionRunPath, userId, agentId);
   }
+  if (toolName === "stream_image") {
+    return makeStreamImageTool(sessionId, sessionRunPath, userId);
+  }
   return factory(sessionId, sessionRunPath);
 }
 

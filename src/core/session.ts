@@ -1,4 +1,3 @@
-import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -8,18 +7,47 @@ import { loadManifest } from "core/manifest_loader";
 import { markSessionEvicted } from "infra/workflow_checkpointer";
 import { streamManager } from "infra/stream_manager";
 
+function pickHeader(v: string | string[] | undefined): string | undefined {
+  return Array.isArray(v) ? v[0] : v;
+}
 
-export function buildSessionId(userId: string, chatId: string): string {
-  const raw = `${userId}:${chatId}`;
-  return crypto.createHash("sha256").update(raw, "utf-8").digest("hex").slice(0, 32);
+export function parseUserId(
+  header: string | string[] | undefined,
+): string | undefined {
+  const raw = pickHeader(header);
+  if (!raw) return undefined;
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
+export function sanitizeUserId(userId: string): string {
+  const sanitized = userId
+    .trim()
+    .replace(/\0/g, "")
+    .replace(/[\\/]/g, "_");
+  if (!sanitized || sanitized === "." || sanitized === "..") {
+    throw new Error("Invalid userId for filesystem path");
+  }
+  return sanitized;
+}
+
+export function buildSessionRunPath(userId: string, chatId: string): string {
+  return path.join(
+    CONFIG.baseRunPath,
+    sanitizeUserId(userId),
+    chatId,
+  );
 }
 
 export interface WorkflowSession {
   sessionId: string;
   sessionRunPath: string;
   userId: string;
+  chatId: string;
 }
-
 
 type OrchestratorGraph = any;
 
@@ -47,13 +75,12 @@ export class SessionEntry {
         manifest,
         this.session.sessionId,
         this.session.sessionRunPath,
-        this.session.userId
+        this.session.userId,
       );
     }
     return this._orchestrator;
   }
 }
-
 
 export class SessionStore {
   _store: Map<string, SessionEntry> = new Map();
@@ -88,22 +115,23 @@ export class SessionStore {
     }
   }
 
-  getOrCreate(sessionId: string, userId: string): SessionEntry {
-    const existing = this._store.get(sessionId);
+  getOrCreate(userId: string, chatId: string): SessionEntry {
+    const existing = this._store.get(chatId);
     if (existing) {
-      this.touch(sessionId);
+      this.touch(chatId);
       return existing;
     }
 
     const session: WorkflowSession = {
-      sessionId,
-      sessionRunPath: path.join(CONFIG.baseRunPath, sessionId),
+      sessionId: chatId,
+      sessionRunPath: buildSessionRunPath(userId, chatId),
       userId,
+      chatId,
     };
 
     const entry = new SessionEntry(session);
-    this._store.set(sessionId, entry);
-    this._insertOrder.push(sessionId);
+    this._store.set(chatId, entry);
+    this._insertOrder.push(chatId);
 
     if (this._store.size > this._max) {
       this.evictOldest();

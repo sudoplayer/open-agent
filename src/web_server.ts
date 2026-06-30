@@ -6,7 +6,12 @@ import cors from "@fastify/cors";
 import dotenv from "dotenv";
 
 import { CONFIG } from "config";
-import { SessionEntry, SessionStore, buildSessionId } from "core/session";
+import {
+  SessionEntry,
+  SessionStore,
+  buildSessionRunPath,
+  parseUserId,
+} from "core/session";
 import { loadManifest } from "core/manifest_loader";
 import { streamManager } from "infra/stream_manager";
 import { runUntilInterrupt, hasPendingInterrupt, isWorkflowDone } from "agents/runner";
@@ -164,13 +169,20 @@ function serveMpegStream(reply: any, pngPath: string, streamingMarker: string): 
   });
 }
 
-app.get<{ Params: { sessionId: string; "*": string } }>(
-  "/v1/sessions/:sessionId/live/*",
+app.get<{ Params: { userId: string; chatId: string; "*": string } }>(
+  "/v1/sessions/:userId/:chatId/live/*",
   async (request, reply) => {
-    const { sessionId } = request.params;
+    const { userId: userIdParam, chatId } = request.params;
     const filename = request.params["*"];
 
-    const sessionDir = path.resolve(path.join(CONFIG.baseRunPath, sessionId));
+    let sessionDir: string;
+    try {
+      sessionDir = path.resolve(
+        buildSessionRunPath(decodeURIComponent(userIdParam), chatId),
+      );
+    } catch {
+      return reply.code(400).send({ detail: "Invalid userId" });
+    }
     if (!fs.existsSync(sessionDir)) {
       return reply.code(404).send({ detail: "Session not found" });
     }
@@ -206,7 +218,7 @@ function resolveSessionIdentity(
   headers: Record<string, string | string[] | undefined>,
 ): { userId?: string; chatId?: string } {
   return {
-    userId: pickHeader(headers["x-openwebui-user-id"]),
+    userId: parseUserId(headers["x-openwebui-user-name"]),
     chatId: pickHeader(headers["x-openwebui-chat-id"]),
   };
 }
@@ -218,13 +230,18 @@ app.post<{ Body: ChatCompletionRequest }>("/v1/chat/completions", async (request
   if (!userId || !chatId) {
     return reply.code(400).send({
       detail:
-        "Missing session identity: x-openwebui-user-id and x-openwebui-chat-id headers are required " +
+        "Missing session identity: x-openwebui-user-name and x-openwebui-chat-id headers are required " +
         "(set ENABLE_FORWARD_USER_INFO_HEADERS=true on OpenWebUI).",
     });
   }
 
-  const sessionId = buildSessionId(userId, chatId);
-  const entry = _sessions.getOrCreate(sessionId, userId);
+  let entry: SessionEntry;
+  try {
+    entry = _sessions.getOrCreate(userId, chatId);
+  } catch {
+    return reply.code(400).send({ detail: "Invalid userId" });
+  }
+  const sessionId = entry.session.sessionId;
   const orchestrator = entry.getOrchestrator();
 
   const userMessages = body.messages.filter((m) => m.role === "user");

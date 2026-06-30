@@ -11,7 +11,7 @@
 - **HITL 交互卡片** — 将 `ask-user-question` 代码块渲染为可点击的选项按钮
 - **文件路径选择器** — 将 `request-file-path` 代码块渲染为文件系统浏览组件
 - **动态图片渲染** — 支持 MJPEG 实时流和静态 PNG 内嵌展示
-- **会话管理** — OpenWebUI 在 `ENABLE_FORWARD_USER_INFO_HEADERS=true` 时通过 HTTP 头（`x-openwebui-user-id`、`x-openwebui-chat-id`）将 `user_id` / `chat_id` 转发到后端，实现跨轮次上下文保持
+- **会话管理** — OpenWebUI 在 `ENABLE_FORWARD_USER_INFO_HEADERS=true` 时通过 HTTP 头（`x-openwebui-user-name`、`x-openwebui-chat-id`）将注册显示名与 `chat_id` 转发到后端，实现跨轮次上下文保持。runs 与 memory 按用户分目录：`runs/{userId}/{chatId}/`、`memory/{userId}/`。
 
 ---
 
@@ -114,7 +114,7 @@ OpenWebUI 可通过 HTTP 头将会话身份转发到后端。启动脚本（`sta
 
 若 OpenWebUI 已在未设置该变量的情况下运行，需先停止现有进程，再带上该环境变量重启，或重新运行启动脚本。
 
-后端从请求头 `x-openwebui-user-id`、`x-openwebui-chat-id` 读取会话身份，用于跨轮次保持上下文。
+后端从请求头 `x-openwebui-user-name`（注册显示名）、`x-openwebui-chat-id` 读取会话身份，用于跨轮次保持上下文。会话数据存放在 `runs/{userId}/{chatId}/`，用户记忆在 `memory/{userId}/`。
 
 ### 5. 启动服务
 
@@ -150,7 +150,7 @@ npm start
    ```
    API Key 可任意填写（本平台不校验上游 Key）。
 
-若 OpenWebUI 未设置 `ENABLE_FORWARD_USER_INFO_HEADERS=true`，后端会因缺少 `x-openwebui-user-id` / `x-openwebui-chat-id` 请求头而拒绝请求。
+若 OpenWebUI 未设置 `ENABLE_FORWARD_USER_INFO_HEADERS=true`，后端会因缺少 `x-openwebui-user-name` / `x-openwebui-chat-id` 请求头而拒绝请求。
 
 ---
 
@@ -170,7 +170,7 @@ window.__REQUEST_FILE_PATH_JS_VERSION
 # 3. 发起对话，触发 HITL 流程 — 选项卡片与文件选择器应正常渲染；
 #    点击选项后应自动提交用户消息。
 
-# 4. 在 Network 中查看 POST .../v1/chat/completions，请求头应含 x-openwebui-user-id、x-openwebui-chat-id。
+# 4. 在 Network 中查看 POST .../v1/chat/completions，请求头应含 x-openwebui-user-name、x-openwebui-chat-id。
 ```
 
 ---

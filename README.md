@@ -132,7 +132,7 @@ The default `agents/` directory ships with an AI Calculator demo. Use it as a re
 | `GET /health`                            | Health check                                                                 |
 | `GET /v1/models`                         | List available models                                                        |
 | `POST /v1/chat/completions`              | Chat completion (SSE streaming), supports automatic recovery on interruption |
-| `GET /v1/sessions/:sessionId/live/:path` | Get session image (MJPEG live stream + static PNG)                           |
+| `GET /v1/sessions/:userId/:chatId/live/:path` | Get session image (MJPEG live stream + static PNG)                           |
 | `GET /v1/fs/list?path=...&dirs_only=...` | File system browser (for frontend file picker)                               |
 
 

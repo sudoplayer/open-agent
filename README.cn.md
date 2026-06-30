@@ -134,7 +134,7 @@ agents/
 | `GET /health`                            | 健康检查                       |
 | `GET /v1/models`                         | 获取可用模型列表                   |
 | `POST /v1/chat/completions`              | 对话（SSE 流式），支持中断自动恢复        |
-| `GET /v1/sessions/:sessionId/live/:path` | 获取会话图片（MJPEG 实时流 + 静态 PNG） |
+| `GET /v1/sessions/:userId/:chatId/live/:path` | 获取会话图片（MJPEG 实时流 + 静态 PNG） |
 | `GET /v1/fs/list?path=...&dirs_only=...` | 文件系统浏览（供前端文件选择器使用）         |
 
 
