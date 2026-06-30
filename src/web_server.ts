@@ -68,6 +68,102 @@ app.get("/v1/models", async () => {
   };
 });
 
+function isValidPNG(buf: Buffer): boolean {
+  return buf.length >= 8 &&
+    buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47 &&
+    buf[4] === 0x0D && buf[5] === 0x0A && buf[6] === 0x1A && buf[7] === 0x0A;
+}
+
+function isPNGComplete(buf: Buffer): boolean {
+  return buf.length >= 20 &&
+    buf[buf.length - 8] === 0x49 && buf[buf.length - 7] === 0x45 &&
+    buf[buf.length - 6] === 0x4E && buf[buf.length - 5] === 0x44;
+}
+
+function serveMpegStream(reply: any, pngPath: string, streamingMarker: string): void {
+  const boundary = "frame";
+  const POLL_INTERVAL_MS = 200;
+  const STALE_LIMIT = 50;
+  const MAX_WAIT_MS = 300_000;
+  const MAX_DURATION_MS = 3_600_000;
+
+  reply.raw.writeHead(200, {
+    "Content-Type": `multipart/x-mixed-replace; boundary=${boundary}`,
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+    "Access-Control-Allow-Origin": "*",
+  });
+  reply.hijack();
+
+  let lastMtime = 0;
+  let staleCount = 0;
+  const startTime = Date.now();
+
+  function cleanupStreamingMarker(): void {
+    try { fs.unlinkSync(streamingMarker); } catch { /* ignore */ }
+  }
+
+  function sendFrame(): void {
+    if (!fs.existsSync(pngPath)) return;
+    try {
+      const stat = fs.statSync(pngPath);
+      if (stat.mtimeMs === lastMtime) {
+        staleCount++;
+        return;
+      }
+
+      const data = fs.readFileSync(pngPath);
+      if (!isValidPNG(data) || !isPNGComplete(data)) return;
+
+      staleCount = 0;
+      lastMtime = stat.mtimeMs;
+      reply.raw.write(
+        `--${boundary}\r\nContent-Type: image/png\r\nContent-Length: ${data.length}\r\n\r\n`
+      );
+      reply.raw.write(data);
+      reply.raw.write("\r\n");
+    } catch {
+      // 文件可能正在写入；跳过本次轮询
+    }
+  }
+
+  const timer = setInterval(() => {
+    const elapsed = Date.now() - startTime;
+
+    if (elapsed > MAX_DURATION_MS) {
+      clearInterval(timer);
+      cleanupStreamingMarker();
+      try { reply.raw.end(); } catch { /* ignore */ }
+      return;
+    }
+
+    if (!fs.existsSync(pngPath) && elapsed < MAX_WAIT_MS) return;
+
+    sendFrame();
+
+    if (staleCount >= STALE_LIMIT) {
+      clearInterval(timer);
+      cleanupStreamingMarker();
+      try {
+        const data = fs.readFileSync(pngPath);
+        if (isValidPNG(data) && isPNGComplete(data)) {
+          reply.raw.write(
+            `--${boundary}\r\nContent-Type: image/png\r\nContent-Length: ${data.length}\r\n\r\n`
+          );
+          reply.raw.write(data);
+          reply.raw.write("\r\n");
+        }
+        reply.raw.end();
+      } catch { /* ignore */ }
+    }
+  }, POLL_INTERVAL_MS);
+
+  reply.raw.on("close", () => {
+    clearInterval(timer);
+    cleanupStreamingMarker();
+  });
+}
+
 app.get<{ Params: { sessionId: string; "*": string } }>(
   "/v1/sessions/:sessionId/live/*",
   async (request, reply) => {
@@ -93,103 +189,7 @@ app.get<{ Params: { sessionId: string; "*": string } }>(
       }
     }
 
-    // MJPEG 实时流模式
-    const boundary = "frame";
-    const POLL_INTERVAL_MS = 200;
-    const STALE_LIMIT = 50;        // 0.2 s × 50 = 10 s 无变化 → 结束流
-    const MAX_WAIT_MS = 300_000;   // 等待文件出现的最长时间
-    const MAX_DURATION_MS = 3_600_000;
-
-    function isValidPNG(buf: Buffer): boolean {
-      return buf.length >= 8 &&
-        buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47 &&
-        buf[4] === 0x0D && buf[5] === 0x0A && buf[6] === 0x1A && buf[7] === 0x0A;
-    }
-
-    function isPNGComplete(buf: Buffer): boolean {
-      return buf.length >= 20 &&
-        buf[buf.length - 8] === 0x49 && buf[buf.length - 7] === 0x45 &&
-        buf[buf.length - 6] === 0x4E && buf[buf.length - 5] === 0x44;
-    }
-
-    reply.raw.writeHead(200, {
-      "Content-Type": `multipart/x-mixed-replace; boundary=${boundary}`,
-      "Cache-Control": "no-cache",
-      "Connection": "keep-alive",
-      "Access-Control-Allow-Origin": "*",
-    });
-    reply.hijack();
-
-    let lastMtime = 0;
-    let staleCount = 0;
-    const startTime = Date.now();
-
-    // 清理 .streaming 标记，让后续请求走静态模式
-    function cleanupStreamingMarker(): void {
-      try { fs.unlinkSync(streamingMarker); } catch { /* ignore */ }
-    }
-
-    function sendFrame(): void {
-      if (!fs.existsSync(pngPath)) return;
-      try {
-        const stat = fs.statSync(pngPath);
-        if (stat.mtimeMs === lastMtime) {
-          staleCount++;
-          return;
-        }
-
-        const data = fs.readFileSync(pngPath);
-        if (!isValidPNG(data) || !isPNGComplete(data)) return;
-
-        staleCount = 0;
-        lastMtime = stat.mtimeMs;
-        reply.raw.write(
-          `--${boundary}\r\nContent-Type: image/png\r\nContent-Length: ${data.length}\r\n\r\n`
-        );
-        reply.raw.write(data);
-        reply.raw.write("\r\n");
-      } catch {
-        // 文件可能正在写入；跳过本次轮询
-      }
-    }
-
-    const timer = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-
-      if (elapsed > MAX_DURATION_MS) {
-        clearInterval(timer);
-        cleanupStreamingMarker();
-        try { reply.raw.end(); } catch { /* ignore */ }
-        return;
-      }
-
-      // 文件尚未出现且未超时，静默等待
-      if (!fs.existsSync(pngPath) && elapsed < MAX_WAIT_MS) return;
-
-      sendFrame();
-
-      if (staleCount >= STALE_LIMIT) {
-        clearInterval(timer);
-        cleanupStreamingMarker();
-        try {
-          // 发送最后一帧后直接关闭连接
-          const data = fs.readFileSync(pngPath);
-          if (isValidPNG(data) && isPNGComplete(data)) {
-            reply.raw.write(
-              `--${boundary}\r\nContent-Type: image/png\r\nContent-Length: ${data.length}\r\n\r\n`
-            );
-            reply.raw.write(data);
-            reply.raw.write("\r\n");
-          }
-          reply.raw.end();
-        } catch { /* ignore */ }
-      }
-    }, POLL_INTERVAL_MS);
-
-    reply.raw.on("close", () => {
-      clearInterval(timer);
-      cleanupStreamingMarker();
-    });
+    serveMpegStream(reply, pngPath, streamingMarker);
   }
 );
 
