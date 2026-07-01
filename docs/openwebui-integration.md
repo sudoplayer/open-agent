@@ -7,7 +7,7 @@ This platform deeply integrates with OpenWebUI, providing the following capabili
 - **HITL Interactive Cards** — Renders `ask-user-question` code blocks as clickable option buttons
 - **File Path Picker** — Renders `request-file-path` code blocks as a file system browser component
 - **Dynamic Image Rendering** — Supports MJPEG live streams and embedded static PNG display
-- **Session Management** — OpenWebUI forwards the user's display name and `chat_id` via HTTP headers (`x-openwebui-user-name`, `x-openwebui-chat-id`) when `ENABLE_FORWARD_USER_INFO_HEADERS=true`, enabling cross-turn context preservation. Runs and memory are stored per user under `runs/{userId}/{chatId}/` and `memory/{userId}/`.
+- **Session Management** — OpenWebUI forwards the user's display name and `chat_id` via HTTP headers (`x-openwebui-user-name`, `x-openwebui-chat-id`) when `ENABLE_FORWARD_USER_INFO_HEADERS=true`, enabling cross-turn context preservation. Runs and memory are stored per user under `~/agent_artifacts/runs/{userId}/{chatId}/` and `~/agent_artifacts/memory/{userId}/` (outside the platform install directory). After a workflow completes, users can send follow-up messages in the same chat to continue on existing artifacts; if a workflow is still running, the backend prompts the user to wait.
 
 ---
 
@@ -112,7 +112,7 @@ OpenWebUI can forward session identity to the backend via HTTP headers. The star
 
 If OpenWebUI is already running without this variable, restart it with the env var set, or re-run the startup script after stopping the existing process.
 
-The backend reads `x-openwebui-user-name` (registration display name) and `x-openwebui-chat-id` from incoming request headers to maintain session context across turns. Session data is stored at `runs/{userId}/{chatId}/`; user memory at `memory/{userId}/`.
+The backend reads `x-openwebui-user-name` (registration display name) and `x-openwebui-chat-id` from incoming request headers to maintain session context across turns. Session artifacts are stored at `~/agent_artifacts/runs/{userId}/{chatId}/`; user memory at `~/agent_artifacts/memory/{userId}/`. Multi-turn behavior: HITL interrupts resume via the same chat; after a workflow finishes, follow-up messages start a new turn on existing artifacts; concurrent messages while a turn is in progress receive a wait prompt.
 
 ### 5. Start Services
 

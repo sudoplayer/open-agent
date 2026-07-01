@@ -11,7 +11,7 @@
 - **HITL 交互卡片** — 将 `ask-user-question` 代码块渲染为可点击的选项按钮
 - **文件路径选择器** — 将 `request-file-path` 代码块渲染为文件系统浏览组件
 - **动态图片渲染** — 支持 MJPEG 实时流和静态 PNG 内嵌展示
-- **会话管理** — OpenWebUI 在 `ENABLE_FORWARD_USER_INFO_HEADERS=true` 时通过 HTTP 头（`x-openwebui-user-name`、`x-openwebui-chat-id`）将注册显示名与 `chat_id` 转发到后端，实现跨轮次上下文保持。runs 与 memory 按用户分目录：`runs/{userId}/{chatId}/`、`memory/{userId}/`。
+- **会话管理** — OpenWebUI 在 `ENABLE_FORWARD_USER_INFO_HEADERS=true` 时通过 HTTP 头（`x-openwebui-user-name`、`x-openwebui-chat-id`）将注册显示名与 `chat_id` 转发到后端，实现跨轮次上下文保持。runs 与 memory 按用户分目录，存放在用户主目录下：`~/agent_artifacts/runs/{userId}/{chatId}/`、`~/agent_artifacts/memory/{userId}/`（与平台安装目录隔离）。工作流完成后，用户可在同一 chat 中发送 follow-up 消息，在已有 artifacts 基础上继续；若工作流仍在执行中，后端会提示等待。
 
 ---
 
@@ -114,7 +114,7 @@ OpenWebUI 可通过 HTTP 头将会话身份转发到后端。启动脚本（`sta
 
 若 OpenWebUI 已在未设置该变量的情况下运行，需先停止现有进程，再带上该环境变量重启，或重新运行启动脚本。
 
-后端从请求头 `x-openwebui-user-name`（注册显示名）、`x-openwebui-chat-id` 读取会话身份，用于跨轮次保持上下文。会话数据存放在 `runs/{userId}/{chatId}/`，用户记忆在 `memory/{userId}/`。
+后端从请求头 `x-openwebui-user-name`（注册显示名）、`x-openwebui-chat-id` 读取会话身份，用于跨轮次保持上下文。会话工件存放在 `~/agent_artifacts/runs/{userId}/{chatId}/`，用户记忆在 `~/agent_artifacts/memory/{userId}/`。多轮行为：HITL 中断在同一 chat 内 resume；工作流完成后可发送 follow-up 在已有 artifacts 上续作；若本轮仍在执行中，并发消息会收到等待提示。
 
 ### 5. 启动服务
 

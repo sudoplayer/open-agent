@@ -1,3 +1,4 @@
+import * as os from "os";
 import * as path from "path";
 import dotenv from "dotenv";
 
@@ -16,7 +17,7 @@ function envFlag(name: string, defaultValue = false): boolean {
 export class Config {
   readonly projectRoot = PROJECT_ROOT;
   readonly agentsRoot = path.join(PROJECT_ROOT, "agents");
-  readonly baseRunPath = path.join(PROJECT_ROOT, "runs");
+  readonly baseRunPath = path.join(os.homedir(), "agent_artifacts", "runs");
   readonly modelBaseUrl = process.env.MODEL_BASE_URL ?? "https://api.deepseek.com";
   readonly modelName = process.env.MODEL_NAME ?? "deepseek-v4-flash";
   readonly llmApiKey = process.env.LLM_API_KEY;
@@ -36,7 +37,7 @@ export class Config {
   );
   readonly checkpointVacuumIntervalMs =
     Number(process.env.CHECKPOINT_VACUUM_INTERVAL_HOURS ?? 6) * 60 * 60 * 1000;
-  readonly memoryRoot = "memory";
+  readonly memoryRoot = path.join(os.homedir(), "agent_artifacts", "memory");
   readonly memoryMaxChars = 500;
 }
 

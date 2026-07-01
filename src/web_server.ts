@@ -223,6 +223,33 @@ function resolveSessionIdentity(
   };
 }
 
+function buildTurnUserContent(
+  latestUserMessage: string,
+  sessionRunPath: string,
+  kind: "initial" | "follow-up",
+): string {
+  const context = `session_run_path: ${sessionRunPath}\n\nPlease respond in Chinese`;
+  if (kind === "follow-up") {
+    return `Follow-up request (build on existing artifacts in session_run_path): ${latestUserMessage}\n\n${context}`;
+  }
+  return `User request: ${latestUserMessage}\n\n${context}`;
+}
+
+function buildTurnInputs(
+  latestUserMessage: string,
+  sessionRunPath: string,
+  kind: "initial" | "follow-up",
+): { messages: Array<{ role: string; content: string }> } {
+  return {
+    messages: [
+      {
+        role: "user",
+        content: buildTurnUserContent(latestUserMessage, sessionRunPath, kind),
+      },
+    ],
+  };
+}
+
 app.post<{ Body: ChatCompletionRequest }>("/v1/chat/completions", async (request, reply) => {
   const body = request.body;
   const { userId, chatId } = resolveSessionIdentity(request.headers);
@@ -257,18 +284,25 @@ app.post<{ Body: ChatCompletionRequest }>("/v1/chat/completions", async (request
         await runWorkflowTurn(entry, new Command({ resume: latestUserMessage }));
       } else {
         const snapshot = await orchestrator.getState({ configurable: { thread_id: sessionId } });
-        if (snapshot.values && Object.keys(snapshot.values as object).length > 0) {
-          streamManager.streamOutput("\n\n❌ Please start a new conversation.\n\n", sessionId);
+        const hasPriorState =
+          snapshot.values && Object.keys(snapshot.values as object).length > 0;
+        const sessionRunPath = entry.session.sessionRunPath;
+
+        if (hasPriorState && (await isWorkflowDone(orchestrator, sessionId))) {
+          await runWorkflowTurn(
+            entry,
+            buildTurnInputs(latestUserMessage, sessionRunPath, "follow-up"),
+          );
+        } else if (hasPriorState) {
+          streamManager.streamOutput(
+            "\n\n⏳ 当前工作流仍在进行中，请等待本轮结束后再发送消息。\n\n",
+            sessionId,
+          );
         } else {
-          const inputs = {
-            messages: [
-              {
-                role: "user",
-                content: `User request: ${latestUserMessage}\n\nsession_run_path: ${entry.session.sessionRunPath}\n\nPlease respond in Chinese`,
-              },
-            ],
-          };
-          await runWorkflowTurn(entry, inputs);
+          await runWorkflowTurn(
+            entry,
+            buildTurnInputs(latestUserMessage, sessionRunPath, "initial"),
+          );
         }
       }
     } catch (e) {
@@ -289,6 +323,7 @@ if (require.main === module) {
       await initWorkflowCheckpointer();
       startCheckpointVacuumScheduler();
       await fs.promises.mkdir(CONFIG.baseRunPath, { recursive: true });
+      await fs.promises.mkdir(CONFIG.memoryRoot, { recursive: true });
       await app.listen({ host: "0.0.0.0", port: CONFIG.apiPort });
       console.log(
         `✅ ${_manifest.displayName} 已启动，监听 0.0.0.0:${CONFIG.apiPort}`

@@ -274,6 +274,34 @@ Step 2 执行:
 Step 4 最终确认 → Step 5 跳过记忆 → Step 6 输出总结
 ```
 
+## Follow-up（完结后续改）
+
+**触发条件**：用户消息以 `Follow-up request (build on existing artifacts in session_run_path):` 开头，或明确表示在已完成计算基础上继续调整。
+
+**禁止**：
+
+- **禁止**默认从 Step 1 完整重跑（除非用户明确要求「重新计算」或给出全新表达式）
+- 必须先 `ls` / `read_file` 盘点 `session_run_path` 下已有产物
+
+### Follow-up 1. 盘点与意图确认
+
+1. 检查 `session_run_path` 下已有文件与上一轮计算结果
+2. 识别用户意图：新表达式、修正/质疑结果、调整展示偏好等
+3. 意图不清时调用 `ask_user_question` 确认
+
+### Follow-up 2. 最小范围执行
+
+| 用户意图 | 行为 |
+|----------|------|
+| 新表达式计算 | 进入 Step 1 解析新表达式（可复用已加载 memory 中的偏好） |
+| 修正/质疑上一轮结果 | 读取对话上下文与 session 产物，最小范围重算或解释 |
+| 仅调整展示/格式偏好 | 直接响应或走 Step 5 记忆流程 |
+| 明确要求全流程重算 | 从 Step 1 重启 |
+
+完成后向用户报告变更。本轮若无新的用户偏好修正，**跳过** Step 5 记忆流程。
+
+**Memory**：follow-up 轮仍须执行本 skill 顶部 Memory 检查段。
+
 ## 注意
 
 - 请用中文与用户交流

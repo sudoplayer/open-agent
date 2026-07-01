@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 import { CONFIG } from "config";
+import { sanitizeUserId } from "core/session";
 
 /** Derive agentId from a resolved skill directory path (basename). */
 export function agentIdFromSkillPath(skillPath: string): string {
@@ -13,9 +14,8 @@ export function resolveUserMemoryPath(
   agentId: string
 ): string {
   return path.join(
-    CONFIG.projectRoot,
     CONFIG.memoryRoot,
-    userId,
+    sanitizeUserId(userId),
     agentId,
     "MEMORY.md"
   );
